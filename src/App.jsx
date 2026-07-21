@@ -5,19 +5,10 @@ import Cities from './pages/Cities.jsx'
 import CityPage from './pages/CityPage.jsx'
 import EventDetail from './pages/EventDetail.jsx'
 import Login from './pages/Login.jsx'
+import CuratorLogin from './pages/CuratorLogin.jsx'
 import RequestAccess from './pages/RequestAccess.jsx'
 import CuratorPortal from './pages/CuratorPortal.jsx'
 
-const styles = {
-  app: {
-    fontFamily: "'DM Sans', sans-serif",
-    backgroundColor: '#FAF8F5',
-    minHeight: '100vh',
-    color: '#1A1A1A',
-  }
-}
-
-// Global CSS reset injected once
 const globalCSS = `
   * { margin: 0; padding: 0; box-sizing: border-box; }
   body { background: #FAF8F5; }
@@ -29,7 +20,7 @@ export default function App() {
   return (
     <BrowserRouter>
       <style>{globalCSS}</style>
-      <div style={styles.app}>
+      <div style={{ fontFamily: "'DM Sans', sans-serif", backgroundColor: '#FAF8F5', minHeight: '100vh', color: '#1A1A1A' }}>
         <Navbar />
         <Routes>
           <Route path="/" element={<Home />} />
@@ -37,6 +28,7 @@ export default function App() {
           <Route path="/cities/:city" element={<CityPage />} />
           <Route path="/events/:id" element={<EventDetail />} />
           <Route path="/login" element={<Login />} />
+          <Route path="/curator-login" element={<CuratorLogin />} />
           <Route path="/request-access" element={<RequestAccess />} />
           <Route path="/curator" element={<CuratorPortal />} />
         </Routes>
