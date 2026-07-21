@@ -1,19 +1,11 @@
 import { useState } from 'react'
-import { useNavigate, Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase.js'
 
 const styles = {
   page: {
-    minHeight: '100vh',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: '32px',
-    backgroundColor: '#FAF8F5',
-  },
-  card: {
-    width: '100%',
-    maxWidth: '400px',
+    maxWidth: '600px',
+    margin: '0 auto',
+    padding: '80px 32px',
   },
   eyebrow: {
     fontFamily: "'DM Sans', sans-serif",
@@ -26,24 +18,29 @@ const styles = {
   },
   headline: {
     fontFamily: "'Cormorant Garamond', serif",
-    fontSize: '48px',
+    fontSize: 'clamp(36px, 6vw, 56px)',
     fontWeight: '500',
-    color: '#1A1A1A',
-    marginBottom: '8px',
     lineHeight: '1.1',
+    color: '#1A1A1A',
+    marginBottom: '16px',
   },
   sub: {
     fontFamily: "'DM Sans', sans-serif",
-    fontSize: '14px',
+    fontSize: '15px',
     fontWeight: '300',
+    lineHeight: '1.7',
     color: '#6B6560',
-    marginBottom: '48px',
-    lineHeight: '1.6',
+    marginBottom: '56px',
   },
   form: {
     display: 'flex',
     flexDirection: 'column',
-    gap: '16px',
+    gap: '24px',
+  },
+  fieldGroup: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '6px',
   },
   label: {
     fontFamily: "'DM Sans', sans-serif",
@@ -52,8 +49,6 @@ const styles = {
     letterSpacing: '0.08em',
     textTransform: 'uppercase',
     color: '#6B6560',
-    marginBottom: '6px',
-    display: 'block',
   },
   input: {
     width: '100%',
@@ -67,6 +62,22 @@ const styles = {
     borderRadius: '2px',
     outline: 'none',
     boxSizing: 'border-box',
+  },
+  textarea: {
+    width: '100%',
+    padding: '12px 16px',
+    fontFamily: "'DM Sans', sans-serif",
+    fontSize: '14px',
+    fontWeight: '300',
+    color: '#1A1A1A',
+    backgroundColor: '#F2EEE9',
+    border: '1px solid #E8E4DE',
+    borderRadius: '2px',
+    outline: 'none',
+    boxSizing: 'border-box',
+    resize: 'vertical',
+    minHeight: '120px',
+    lineHeight: '1.6',
   },
   button: {
     width: '100%',
@@ -83,40 +94,22 @@ const styles = {
     cursor: 'pointer',
     marginTop: '8px',
   },
-  divider: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '16px',
-    margin: '24px 0',
-  },
-  dividerLine: {
-    flex: 1,
-    height: '1px',
-    backgroundColor: '#E8E4DE',
-  },
-  dividerText: {
-    fontFamily: "'DM Sans', sans-serif",
-    fontSize: '11px',
-    color: '#9B9590',
-    letterSpacing: '0.08em',
-    textTransform: 'uppercase',
-  },
-  googleBtn: {
-    width: '100%',
-    padding: '14px',
-    fontFamily: "'DM Sans', sans-serif",
-    fontSize: '13px',
-    fontWeight: '400',
-    letterSpacing: '0.04em',
+  success: {
+    fontFamily: "'Cormorant Garamond', serif",
+    fontSize: '28px',
+    fontStyle: 'italic',
     color: '#1A1A1A',
-    backgroundColor: '#FAF8F5',
-    border: '1px solid #E8E4DE',
-    borderRadius: '2px',
-    cursor: 'pointer',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: '10px',
+    textAlign: 'center',
+    padding: '48px 0',
+    lineHeight: '1.4',
+  },
+  successSub: {
+    fontFamily: "'DM Sans', sans-serif",
+    fontSize: '14px',
+    fontWeight: '300',
+    color: '#6B6560',
+    textAlign: 'center',
+    marginTop: '12px',
   },
   error: {
     fontFamily: "'DM Sans', sans-serif",
@@ -127,116 +120,135 @@ const styles = {
     borderRadius: '2px',
     border: '1px solid #F5C6C0',
   },
-  success: {
-    fontFamily: "'DM Sans', sans-serif",
-    fontSize: '13px',
-    color: '#27AE60',
-    backgroundColor: '#EDFAF3',
-    padding: '12px 16px',
-    borderRadius: '2px',
-    border: '1px solid #B7EAD0',
-  },
-  toggle: {
-    fontFamily: "'DM Sans', sans-serif",
-    fontSize: '13px',
-    fontWeight: '300',
-    color: '#6B6560',
-    textAlign: 'center',
-    marginTop: '24px',
-  },
-  toggleLink: {
-    color: '#1A1A1A',
-    fontWeight: '500',
-    cursor: 'pointer',
-    borderBottom: '1px solid #1A1A1A',
-    paddingBottom: '1px',
-  },
 }
 
-export default function Login() {
-  const [mode, setMode] = useState('login')
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
+export default function RequestAccess() {
+  const [form, setForm] = useState({
+    name: '',
+    email: '',
+    instagram: '',
+    city: '',
+    why: '',
+  })
   const [loading, setLoading] = useState(false)
+  const [submitted, setSubmitted] = useState(false)
   const [error, setError] = useState('')
-  const [success, setSuccess] = useState('')
-  const navigate = useNavigate()
+
+  function handleChange(e) {
+    setForm({ ...form, [e.target.name]: e.target.value })
+  }
 
   async function handleSubmit(e) {
     e.preventDefault()
     setLoading(true)
     setError('')
-    setSuccess('')
 
-    if (mode === 'login') {
-      const { error } = await supabase.auth.signInWithPassword({ email, password })
-      if (error) {
-        setError(error.message)
-      } else {
-        navigate('/curator')
-      }
+    const { error } = await supabase
+      .from('curator_requests')
+      .insert([form])
+
+    if (error) {
+      setError('Something went wrong. Try again.')
     } else {
-      const { error } = await supabase.auth.signUp({ email, password })
-      if (error) {
-        setError(error.message)
-      } else {
-        setSuccess('Account created! Check your email to confirm.')
-      }
+      setSubmitted(true)
     }
     setLoading(false)
   }
 
-  async function handleGoogle() {
-    await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: { redirectTo: `${window.location.origin}/curator` },
-    })
+  if (submitted) {
+    return (
+      <main style={styles.page}>
+        <p style={styles.success}>
+          "You're on our radar."
+        </p>
+        <p style={styles.successSub}>
+          We review every request personally. If you're the right fit,
+          you'll hear from us soon.
+        </p>
+      </main>
+    )
   }
 
   return (
-    <div style={styles.page}>
-      <div style={styles.card}>
-        <p style={styles.eyebrow}>Welcome back</p>
-        <h1 style={styles.headline}>
-          {mode === 'login' ? 'Sign in.' : 'Join.'}
-        </h1>
-        <p style={styles.sub}>
-          {mode === 'login'
-            ? 'Sign in to access your curator portal.'
-            : 'Create an account to get started.'}
-        </p>
+    <main style={styles.page}>
+      <p style={styles.eyebrow}>For tastemakers & curators</p>
+      <h1 style={styles.headline}>
+        Want to share<br />
+        your city?
+      </h1>
+      <p style={styles.sub}>
+        Get Lored is invite-only on the curator side. We handpick DJs,
+        event promoters, and cultural insiders who know their cities better
+        than anyone. If that's you — apply below.
+      </p>
 
-        {error && <p style={styles.error}>{error}</p>}
-        {success && <p style={styles.success}>{success}</p>}
+      {error && <p style={styles.error}>{error}</p>}
 
-        <form style={styles.form} onSubmit={handleSubmit}>
-          <div>
-            <label style={styles.label}>Email</label>
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              style={styles.input}
-              placeholder="you@example.com"
-              required
-            />
-          </div>
-          <div>
-            <label style={styles.label}>Password</label>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              style={styles.input}
-              placeholder="••••••••"
-              required
-            />
-          </div>
-          <button type="submit" style={styles.button} disabled={loading}>
-            {loading ? 'One moment...' : mode === 'login' ? 'Sign in' : 'Create account'}
-          </button>
-        </form>
+      <form style={styles.form} onSubmit={handleSubmit}>
+        <div style={styles.fieldGroup}>
+          <label style={styles.label}>Full name</label>
+          <input
+            style={styles.input}
+            name="name"
+            value={form.name}
+            onChange={handleChange}
+            placeholder="DJ King Iven"
+            required
+          />
+        </div>
 
-        <div style={styles.divider}>
-          <div style={styles.dividerLine} />
-          <span style={styles.dividerText}>or
+        <div style={styles.fieldGroup}>
+          <label style={styles.label}>Email</label>
+          <input
+            style={styles.input}
+            name="email"
+            type="email"
+            value={form.email}
+            onChange={handleChange}
+            placeholder="you@example.com"
+            required
+          />
+        </div>
+
+        <div style={styles.fieldGroup}>
+          <label style={styles.label}>Instagram handle</label>
+          <input
+            style={styles.input}
+            name="instagram"
+            value={form.instagram}
+            onChange={handleChange}
+            placeholder="@yourhandle"
+          />
+        </div>
+
+        <div style={styles.fieldGroup}>
+          <label style={styles.label}>Your city</label>
+          <input
+            style={styles.input}
+            name="city"
+            value={form.city}
+            onChange={handleChange}
+            placeholder="Charlotte, Miami, London..."
+            required
+          />
+        </div>
+
+        <div style={styles.fieldGroup}>
+          <label style={styles.label}>Why are you the right fit?</label>
+          <textarea
+            style={styles.textarea}
+            name="why"
+            value={form.why}
+            onChange={handleChange}
+            placeholder="Tell us about your scene, your audience, and what you'd bring to Get Lored..."
+            required
+          />
+        </div>
+
+        <button type="submit" style={styles.button} disabled={loading}>
+          {loading ? 'Submitting...' : 'Request access'}
+        </button>
+      </form>
+    </main>
+  )
+}
