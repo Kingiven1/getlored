@@ -1,3 +1,4 @@
+cat > src/pages/CityPage.jsx << 'ENDOFFILE'
 import { useParams, Link } from 'react-router-dom'
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase.js'
@@ -99,3 +100,4 @@ export default function CityPage() {
     </main>
   )
 }
+ENDOFFILE
