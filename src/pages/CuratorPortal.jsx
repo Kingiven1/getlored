@@ -14,6 +14,11 @@ const s = {
   sub: { fontFamily: "'DM Sans', sans-serif", fontSize: '14px', fontWeight: '300', color: '#6B6560', marginBottom: '40px', lineHeight: '1.6' },
   topRow: { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' },
   signOutBtn: { padding: '8px 20px', fontFamily: "'DM Sans', sans-serif", fontSize: '12px', letterSpacing: '0.06em', textTransform: 'uppercase', color: '#6B6560', backgroundColor: 'transparent', border: '1px solid #E8E4DE', borderRadius: '2px', cursor: 'pointer' },
+  flyerBox: { border: '2px dashed #E8E4DE', borderRadius: '4px', padding: '40px', textAlign: 'center', marginBottom: '32px', cursor: 'pointer', backgroundColor: '#F9F7F4' },
+  flyerLabel: { fontFamily: "'DM Sans', sans-serif", fontSize: '13px', color: '#9B9590', marginBottom: '8px' },
+  flyerHint: { fontFamily: "'DM Sans', sans-serif", fontSize: '11px', color: '#B8B4AF', letterSpacing: '0.06em', textTransform: 'uppercase' },
+  flyerPreview: { width: '100%', maxHeight: '300px', objectFit: 'contain', borderRadius: '2px', marginBottom: '16px' },
+  scanBtn: { width: '100%', padding: '12px', fontFamily: "'DM Sans', sans-serif", fontSize: '13px', fontWeight: '500', letterSpacing: '0.06em', textTransform: 'uppercase', color: '#FAF8F5', backgroundColor: '#B07D62', border: 'none', borderRadius: '2px', cursor: 'pointer', marginBottom: '32px' },
   form: { display: 'flex', flexDirection: 'column', gap: '20px' },
   row: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' },
   fieldGroup: { display: 'flex', flexDirection: 'column', gap: '6px' },
@@ -22,12 +27,14 @@ const s = {
   select: { width: '100%', padding: '12px 16px', fontFamily: "'DM Sans', sans-serif", fontSize: '14px', fontWeight: '300', color: '#1A1A1A', backgroundColor: '#F2EEE9', border: '1px solid #E8E4DE', borderRadius: '2px', outline: 'none', boxSizing: 'border-box' },
   textarea: { width: '100%', padding: '12px 16px', fontFamily: "'DM Sans', sans-serif", fontSize: '14px', fontWeight: '300', color: '#1A1A1A', backgroundColor: '#F2EEE9', border: '1px solid #E8E4DE', borderRadius: '2px', outline: 'none', boxSizing: 'border-box', resize: 'vertical', minHeight: '100px', lineHeight: '1.6' },
   button: { padding: '14px 32px', fontFamily: "'DM Sans', sans-serif", fontSize: '13px', fontWeight: '500', letterSpacing: '0.06em', textTransform: 'uppercase', color: '#FAF8F5', backgroundColor: '#1A1A1A', border: 'none', borderRadius: '2px', cursor: 'pointer', alignSelf: 'flex-start' },
-  success: { fontFamily: "'DM Sans', sans-serif", fontSize: '13px', color: '#27AE60', backgroundColor: '#EDFAF3', padding: '12px 16px', borderRadius: '2px', border: '1px solid #B7EAD0' },
-  error: { fontFamily: "'DM Sans', sans-serif", fontSize: '13px', color: '#C0392B', backgroundColor: '#FDF0EE', padding: '12px 16px', borderRadius: '2px', border: '1px solid #F5C6C0' },
+  success: { fontFamily: "'DM Sans', sans-serif", fontSize: '13px', color: '#27AE60', backgroundColor: '#EDFAF3', padding: '12px 16px', borderRadius: '2px', border: '1px solid #B7EAD0', marginBottom: '24px' },
+  error: { fontFamily: "'DM Sans', sans-serif", fontSize: '13px', color: '#C0392B', backgroundColor: '#FDF0EE', padding: '12px 16px', borderRadius: '2px', border: '1px solid #F5C6C0', marginBottom: '24px' },
   notAuth: { textAlign: 'center', padding: '120px 32px' },
   notAuthHeadline: { fontFamily: "'Cormorant Garamond', serif", fontSize: '36px', fontStyle: 'italic', color: '#1A1A1A', marginBottom: '16px' },
   notAuthSub: { fontFamily: "'DM Sans', sans-serif", fontSize: '14px', fontWeight: '300', color: '#6B6560', marginBottom: '32px' },
   notAuthBtn: { display: 'inline-block', padding: '14px 32px', fontFamily: "'DM Sans', sans-serif", fontSize: '13px', fontWeight: '500', letterSpacing: '0.06em', textTransform: 'uppercase', color: '#FAF8F5', backgroundColor: '#1A1A1A', borderRadius: '2px' },
+  divider: { height: '1px', backgroundColor: '#E8E4DE', margin: '40px 0' },
+  sectionTitle: { fontFamily: "'Cormorant Garamond', serif", fontSize: '28px', fontWeight: '500', color: '#1A1A1A', marginBottom: '24px' },
 }
 
 export default function CuratorPortal() {
@@ -35,8 +42,11 @@ export default function CuratorPortal() {
   const [loading, setLoading] = useState(true)
   const [form, setForm] = useState(emptyEvent)
   const [submitting, setSubmitting] = useState(false)
+  const [scanning, setScanning] = useState(false)
   const [success, setSuccess] = useState('')
   const [error, setError] = useState('')
+  const [flyer, setFlyer] = useState(null)
+  const [flyerPreview, setFlyerPreview] = useState(null)
   const navigate = useNavigate()
 
   useEffect(() => {
@@ -54,14 +64,64 @@ export default function CuratorPortal() {
     setForm({ ...form, [e.target.name]: e.target.value })
   }
 
+  function handleFlyerChange(e) {
+    const file = e.target.files[0]
+    if (!file) return
+    setFlyer(file)
+    setFlyerPreview(URL.createObjectURL(file))
+  }
+
+  async function handleScan() {
+    if (!flyer) return
+    setScanning(true)
+    setError('')
+    try {
+      const reader = new FileReader()
+      reader.onload = async (e) => {
+        const base64 = e.target.result.split(',')[1]
+        const mediaType = flyer.type
+        const res = await fetch('/api/scan', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ image: base64, mediaType }),
+        })
+        const data = await res.json()
+        if (data.title) {
+          setForm(prev => ({
+            ...prev,
+            title: data.title || prev.title,
+            venue: data.venue || prev.venue,
+            address: data.address || prev.address,
+            city: data.city || prev.city,
+            country: data.country || prev.country,
+            date: data.date || prev.date,
+            time: data.time || prev.time,
+            genre: data.genre || prev.genre,
+            description: data.description || prev.description,
+            ticket_url: data.ticket_url || prev.ticket_url,
+          }))
+        }
+        setScanning(false)
+      }
+      reader.readAsDataURL(flyer)
+    } catch (err) {
+      setError('Scan failed. Fill in manually.')
+      setScanning(false)
+    }
+  }
+
   async function handleSubmit(e) {
     e.preventDefault()
     setSubmitting(true)
     setError('')
     setSuccess('')
-    const { error } = await supabase.from('events').insert([{ ...form, curator_id: user.id, status: 'published' }])
+    const { error } = await supabase.from('events').insert([{
+      ...form,
+      curator_id: user.id,
+      status: 'published',
+    }])
     if (error) { setError('Something went wrong. Try again.') }
-    else { setSuccess('Event added to Get Lored.'); setForm(emptyEvent) }
+    else { setSuccess('Event added to Get Lored.'); setForm(emptyEvent); setFlyer(null); setFlyerPreview(null) }
     setSubmitting(false)
   }
 
@@ -88,12 +148,36 @@ export default function CuratorPortal() {
         <div>
           <p style={s.eyebrow}>Curator portal</p>
           <h1 style={s.headline}>Add an event.</h1>
-          <p style={s.sub}>Fill in the details to add an event to Get Lored.</p>
+          <p style={s.sub}>Upload a flyer and let AI fill in the details, or enter manually.</p>
         </div>
         <button style={s.signOutBtn} onClick={handleSignOut}>Sign out</button>
       </div>
+
       {success && <p style={s.success}>{success}</p>}
       {error && <p style={s.error}>{error}</p>}
+
+      <h2 style={s.sectionTitle}>Upload flyer</h2>
+      <label style={s.flyerBox}>
+        {flyerPreview ? (
+          <img src={flyerPreview} alt="Flyer preview" style={s.flyerPreview} />
+        ) : (
+          <>
+            <p style={s.flyerLabel}>Drop your flyer here or click to upload</p>
+            <p style={s.flyerHint}>JPG, PNG or PDF</p>
+          </>
+        )}
+        <input type="file" accept="image/*" onChange={handleFlyerChange} style={{ display: 'none' }} />
+      </label>
+
+      {flyer && (
+        <button style={s.scanBtn} onClick={handleScan} disabled={scanning}>
+          {scanning ? 'Reading flyer...' : 'Scan flyer with AI'}
+        </button>
+      )}
+
+      <div style={s.divider} />
+      <h2 style={s.sectionTitle}>Event details</h2>
+
       <form style={s.form} onSubmit={handleSubmit}>
         <div style={s.fieldGroup}>
           <label style={s.label}>Event title</label>
