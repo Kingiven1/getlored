@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase.js'
 
 const s = {
@@ -16,10 +16,11 @@ const s = {
   dividerLine: { flex: 1, height: '1px', backgroundColor: '#E8E4DE' },
   dividerText: { fontFamily: "'DM Sans', sans-serif", fontSize: '11px', color: '#9B9590', letterSpacing: '0.08em', textTransform: 'uppercase' },
   googleBtn: { width: '100%', padding: '14px', fontFamily: "'DM Sans', sans-serif", fontSize: '13px', fontWeight: '400', color: '#1A1A1A', backgroundColor: '#FAF8F5', border: '1px solid #E8E4DE', borderRadius: '2px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px' },
-  error: { fontFamily: "'DM Sans', sans-serif", fontSize: '13px', color: '#C0392B', backgroundColor: '#FDF0EE', padding: '12px 16px', borderRadius: '2px', border: '1px solid #F5C6C0' },
-  success: { fontFamily: "'DM Sans', sans-serif", fontSize: '13px', color: '#27AE60', backgroundColor: '#EDFAF3', padding: '12px 16px', borderRadius: '2px', border: '1px solid #B7EAD0' },
+  error: { fontFamily: "'DM Sans', sans-serif", fontSize: '13px', color: '#C0392B', backgroundColor: '#FDF0EE', padding: '12px 16px', borderRadius: '2px', border: '1px solid #F5C6C0', marginBottom: '16px' },
+  success: { fontFamily: "'DM Sans', sans-serif", fontSize: '13px', color: '#27AE60', backgroundColor: '#EDFAF3', padding: '12px 16px', borderRadius: '2px', border: '1px solid #B7EAD0', marginBottom: '16px' },
   toggle: { fontFamily: "'DM Sans', sans-serif", fontSize: '13px', fontWeight: '300', color: '#6B6560', textAlign: 'center', marginTop: '24px' },
   toggleLink: { color: '#1A1A1A', fontWeight: '500', cursor: 'pointer', borderBottom: '1px solid #1A1A1A', paddingBottom: '1px' },
+  curatorLink: { fontFamily: "'DM Sans', sans-serif", fontSize: '13px', fontWeight: '300', color: '#9B9590', textAlign: 'center', marginTop: '12px' },
 }
 
 export default function Login() {
@@ -43,14 +44,12 @@ export default function Login() {
     if (mode === 'login') {
       const { error } = await supabase.auth.signInWithPassword({ email: form.email, password: form.password })
       if (error) { setError(error.message) }
-      else { navigate('/curator') }
+      else { navigate('/cities') }
     } else {
       const { data, error } = await supabase.auth.signUp({
         email: form.email,
         password: form.password,
-        options: {
-          data: { name: form.name, city: form.city, instagram: form.instagram }
-        }
+        options: { data: { name: form.name, city: form.city, instagram: form.instagram } }
       })
       if (error) { setError(error.message) }
       else {
@@ -60,8 +59,9 @@ export default function Login() {
           city: form.city,
           instagram: form.instagram,
           approved: false,
-        }])
-        setSuccess('Account created! You will be notified when approved.')
+        }]).then(() => {})
+        setSuccess('Account created! Welcome to Get Lored.')
+        setTimeout(() => navigate('/cities'), 1500)
       }
     }
     setLoading(false)
@@ -70,7 +70,7 @@ export default function Login() {
   async function handleGoogle() {
     await supabase.auth.signInWithOAuth({
       provider: 'google',
-      options: { redirectTo: `${window.location.origin}/curator` },
+      options: { redirectTo: `${window.location.origin}/cities` },
     })
   }
 
@@ -79,7 +79,11 @@ export default function Login() {
       <div style={s.card}>
         <p style={s.eyebrow}>{mode === 'login' ? 'Welcome back' : 'Join Get Lored'}</p>
         <h1 style={s.headline}>{mode === 'login' ? 'Sign in.' : 'Sign up.'}</h1>
-        <p style={s.sub}>{mode === 'login' ? 'Access your curator portal.' : 'Create your account to get started.'}</p>
+        <p style={s.sub}>
+          {mode === 'login'
+            ? 'Sign in to save events and access exclusive recommendations.'
+            : 'Create your account to get tapped in.'}
+        </p>
 
         {error && <p style={s.error}>{error}</p>}
         {success && <p style={s.success}>{success}</p>}
@@ -96,7 +100,7 @@ export default function Login() {
                 <input style={s.input} name="city" value={form.city} onChange={handleChange} placeholder="Charlotte, Miami, London..." required />
               </div>
               <div>
-                <label style={s.label}>Instagram handle</label>
+                <label style={s.label}>Instagram handle (optional)</label>
                 <input style={s.input} name="instagram" value={form.instagram} onChange={handleChange} placeholder="@yourhandle" />
               </div>
             </>
@@ -135,6 +139,13 @@ export default function Login() {
           <span style={s.toggleLink} onClick={() => { setMode(mode === 'login' ? 'signup' : 'login'); setError(''); setSuccess('') }}>
             {mode === 'login' ? 'Sign up' : 'Sign in'}
           </span>
+        </p>
+
+        <p style={s.curatorLink}>
+          Are you a curator?{' '}
+          <Link to="/curator-login" style={{ color: '#B07D62', borderBottom: '1px solid #B07D62', paddingBottom: '1px' }}>
+            Curator sign in →
+          </Link>
         </p>
       </div>
     </div>
