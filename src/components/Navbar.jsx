@@ -23,11 +23,7 @@ export default function Navbar() {
   }, [])
 
   async function checkCurator(userId) {
-    const { data } = await supabase
-      .from('curators')
-      .select('approved')
-      .eq('user_id', userId)
-      .single()
+    const { data } = await supabase.from('curators').select('approved').eq('user_id', userId).single()
     setIsCurator(data?.approved === true)
   }
 
@@ -68,6 +64,7 @@ export default function Navbar() {
         ) : (
           <>
             <Link to="/request-access" style={isActive('/request-access') ? {...s.link, ...s.active} : s.link}>Curators</Link>
+            <Link to="/curator-login" style={isActive('/curator-login') ? {...s.link, ...s.active} : s.link}>Portal</Link>
             <Link to="/login" style={s.cta}>Sign in</Link>
           </>
         )}
