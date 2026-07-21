@@ -31,19 +31,16 @@ const s = {
   error: { fontFamily: "'DM Sans', sans-serif", fontSize: '13px', color: '#C0392B', backgroundColor: '#FDF0EE', padding: '12px 16px', borderRadius: '2px', border: '1px solid #F5C6C0', marginBottom: '24px' },
   divider: { height: '1px', backgroundColor: '#E8E4DE', margin: '40px 0' },
   sectionTitle: { fontFamily: "'Cormorant Garamond', serif", fontSize: '28px', fontWeight: '500', color: '#1A1A1A', marginBottom: '24px' },
-  notAuth: { textAlign: 'center', padding: '120px 32px' },
-  notAuthHeadline: { fontFamily: "'Cormorant Garamond', serif", fontSize: '36px', fontStyle: 'italic', color: '#1A1A1A', marginBottom: '16px' },
-  notAuthSub: { fontFamily: "'DM Sans', sans-serif", fontSize: '14px', fontWeight: '300', color: '#6B6560', marginBottom: '32px' },
-  notAuthBtn: { display: 'inline-block', padding: '14px 32px', fontFamily: "'DM Sans', sans-serif", fontSize: '13px', fontWeight: '500', letterSpacing: '0.06em', textTransform: 'uppercase', color: '#FAF8F5', backgroundColor: '#1A1A1A', borderRadius: '2px' },
-  pendingHeadline: { fontFamily: "'Cormorant Garamond', serif", fontSize: '36px', fontStyle: 'italic', color: '#1A1A1A', marginBottom: '16px' },
-  pendingSub: { fontFamily: "'DM Sans', sans-serif", fontSize: '14px', fontWeight: '300', color: '#6B6560', marginBottom: '32px' },
-  pendingBtn: { display: 'inline-block', padding: '14px 32px', fontFamily: "'DM Sans', sans-serif", fontSize: '13px', fontWeight: '500', letterSpacing: '0.06em', textTransform: 'uppercase', color: '#6B6560', backgroundColor: 'transparent', border: '1px solid #E8E4DE', borderRadius: '2px', cursor: 'pointer' },
+  gate: { textAlign: 'center', padding: '120px 32px' },
+  gateHeadline: { fontFamily: "'Cormorant Garamond', serif", fontSize: '36px', fontStyle: 'italic', color: '#1A1A1A', marginBottom: '16px' },
+  gateSub: { fontFamily: "'DM Sans', sans-serif", fontSize: '14px', fontWeight: '300', color: '#6B6560', marginBottom: '32px' },
+  gateBtn: { display: 'inline-block', padding: '14px 32px', fontFamily: "'DM Sans', sans-serif", fontSize: '13px', fontWeight: '500', letterSpacing: '0.06em', textTransform: 'uppercase', color: '#FAF8F5', backgroundColor: '#1A1A1A', borderRadius: '2px', marginRight: '16px' },
+  gateSecondary: { display: 'inline-block', padding: '14px 32px', fontFamily: "'DM Sans', sans-serif", fontSize: '13px', fontWeight: '400', letterSpacing: '0.06em', textTransform: 'uppercase', color: '#6B6560', border: '1px solid #E8E4DE', borderRadius: '2px', cursor: 'pointer', backgroundColor: 'transparent' },
 }
 
 export default function CuratorPortal() {
   const [user, setUser] = useState(null)
-  const [curator, setCurator] = useState(null)
-  const [loading, setLoading] = useState(true)
+  const [curator, setCurator] = useState(undefined)
   const [form, setForm] = useState(emptyEvent)
   const [submitting, setSubmitting] = useState(false)
   const [scanning, setScanning] = useState(false)
@@ -55,22 +52,33 @@ export default function CuratorPortal() {
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
-      setUser(session?.user ?? null)
-      if (session?.user) checkCurator(session.user.id)
-      else setLoading(false)
+      if (session?.user) {
+        setUser(session.user)
+        checkCurator(session.user.id)
+      } else {
+        setUser(null)
+        setCurator(null)
+      }
     })
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_e, session) => {
-      setUser(session?.user ?? null)
-      if (session?.user) checkCurator(session.user.id)
-      else { setCurator(null); setLoading(false) }
+      if (session?.user) {
+        setUser(session.user)
+        checkCurator(session.user.id)
+      } else {
+        setUser(null)
+        setCurator(null)
+      }
     })
     return () => subscription.unsubscribe()
   }, [])
 
   async function checkCurator(userId) {
-    const { data } = await supabase.from('curators').select('*').eq('user_id', userId).single()
+    const { data } = await supabase
+      .from('curators')
+      .select('*')
+      .eq('user_id', userId)
+      .single()
     setCurator(data || null)
-    setLoading(false)
   }
 
   function handleChange(e) { setForm({ ...form, [e.target.name]: e.target.value }) }
@@ -138,40 +146,45 @@ export default function CuratorPortal() {
     navigate('/')
   }
 
-  if (loading) return null
+  // Still loading
+  if (curator === undefined) return null
 
+  // Not logged in
   if (!user) {
     return (
-      <div style={s.notAuth}>
-        <h2 style={s.notAuthHeadline}>Curators only.</h2>
-        <p style={s.notAuthSub}>Sign in to access your portal.</p>
-        <a href="/curator-login" style={s.notAuthBtn}>Sign in</a>
+      <div style={s.gate}>
+        <h2 style={s.gateHeadline}>Curators only.</h2>
+        <p style={s.gateSub}>Sign in to access your portal.</p>
+        <a href="/curator-login" style={s.gateBtn}>Sign in</a>
       </div>
     )
   }
 
+  // Logged in but not a curator
   if (!curator) {
     return (
-      <div style={{ ...s.notAuth }}>
-        <h2 style={s.pendingHeadline}>You're not a curator yet.</h2>
-        <p style={s.pendingSub}>Request access to start uploading events and recommendations.</p>
-        <a href="/request-access" style={s.notAuthBtn}>Request access</a>
+      <div style={s.gate}>
+        <h2 style={s.gateHeadline}>You're not a curator yet.</h2>
+        <p style={s.gateSub}>Request access to start uploading events and recommendations.</p>
+        <a href="/request-access" style={s.gateBtn}>Request access</a>
         <br /><br />
-        <button style={s.pendingBtn} onClick={handleSignOut}>Sign out</button>
+        <button style={s.gateSecondary} onClick={handleSignOut}>Sign out</button>
       </div>
     )
   }
 
+  // Curator exists but not approved
   if (!curator.approved) {
     return (
-      <div style={{ ...s.notAuth }}>
-        <h2 style={s.pendingHeadline}>You're on our radar.</h2>
-        <p style={s.pendingSub}>Your curator application is pending approval. We'll reach out when you're in.</p>
-        <button style={s.pendingBtn} onClick={handleSignOut}>Sign out</button>
+      <div style={s.gate}>
+        <h2 style={s.gateHeadline}>You're on our radar.</h2>
+        <p style={s.gateSub}>Your application is pending. We'll reach out when you're approved.</p>
+        <button style={s.gateSecondary} onClick={handleSignOut}>Sign out</button>
       </div>
     )
   }
 
+  // Approved curator — show portal
   return (
     <main style={s.page}>
       <div style={s.topRow}>
