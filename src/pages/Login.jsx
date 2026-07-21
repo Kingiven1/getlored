@@ -42,25 +42,23 @@ export default function Login() {
     setSuccess('')
 
     if (mode === 'login') {
-      const { error } = await supabase.auth.signInWithPassword({ email: form.email, password: form.password })
+      const { error } = await supabase.auth.signInWithPassword({
+        email: form.email,
+        password: form.password,
+      })
       if (error) { setError(error.message) }
       else { navigate('/cities') }
     } else {
-      const { data, error } = await supabase.auth.signUp({
+      const { error } = await supabase.auth.signUp({
         email: form.email,
         password: form.password,
-        options: { data: { name: form.name, city: form.city, instagram: form.instagram } }
+        options: {
+          data: { name: form.name, city: form.city, instagram: form.instagram }
+        }
       })
       if (error) { setError(error.message) }
       else {
-        await supabase.from('curators').insert([{
-          user_id: data.user?.id,
-          name: form.name,
-          city: form.city,
-          instagram: form.instagram,
-          approved: false,
-        }]).then(() => {})
-        setSuccess('Account created! Welcome to Get Lored.')
+        setSuccess('Welcome to Get Lored.')
         setTimeout(() => navigate('/cities'), 1500)
       }
     }
