@@ -1,11 +1,19 @@
 import { useState } from 'react'
+import { useNavigate, Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase.js'
 
 const styles = {
   page: {
-    maxWidth: '600px',
-    margin: '0 auto',
-    padding: '80px 32px',
+    minHeight: '100vh',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: '32px',
+    backgroundColor: '#FAF8F5',
+  },
+  card: {
+    width: '100%',
+    maxWidth: '400px',
   },
   eyebrow: {
     fontFamily: "'DM Sans', sans-serif",
@@ -18,29 +26,24 @@ const styles = {
   },
   headline: {
     fontFamily: "'Cormorant Garamond', serif",
-    fontSize: 'clamp(36px, 6vw, 56px)',
+    fontSize: '48px',
     fontWeight: '500',
-    lineHeight: '1.1',
     color: '#1A1A1A',
-    marginBottom: '16px',
+    marginBottom: '8px',
+    lineHeight: '1.1',
   },
   sub: {
     fontFamily: "'DM Sans', sans-serif",
-    fontSize: '15px',
+    fontSize: '14px',
     fontWeight: '300',
-    lineHeight: '1.7',
     color: '#6B6560',
-    marginBottom: '56px',
+    marginBottom: '48px',
+    lineHeight: '1.6',
   },
   form: {
     display: 'flex',
     flexDirection: 'column',
-    gap: '24px',
-  },
-  fieldGroup: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '6px',
+    gap: '16px',
   },
   label: {
     fontFamily: "'DM Sans', sans-serif",
@@ -49,6 +52,8 @@ const styles = {
     letterSpacing: '0.08em',
     textTransform: 'uppercase',
     color: '#6B6560',
+    marginBottom: '6px',
+    display: 'block',
   },
   input: {
     width: '100%',
@@ -62,22 +67,6 @@ const styles = {
     borderRadius: '2px',
     outline: 'none',
     boxSizing: 'border-box',
-  },
-  textarea: {
-    width: '100%',
-    padding: '12px 16px',
-    fontFamily: "'DM Sans', sans-serif",
-    fontSize: '14px',
-    fontWeight: '300',
-    color: '#1A1A1A',
-    backgroundColor: '#F2EEE9',
-    border: '1px solid #E8E4DE',
-    borderRadius: '2px',
-    outline: 'none',
-    boxSizing: 'border-box',
-    resize: 'vertical',
-    minHeight: '120px',
-    lineHeight: '1.6',
   },
   button: {
     width: '100%',
@@ -94,22 +83,40 @@ const styles = {
     cursor: 'pointer',
     marginTop: '8px',
   },
-  success: {
-    fontFamily: "'Cormorant Garamond', serif",
-    fontSize: '28px',
-    fontStyle: 'italic',
-    color: '#1A1A1A',
-    textAlign: 'center',
-    padding: '48px 0',
-    lineHeight: '1.4',
+  divider: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '16px',
+    margin: '24px 0',
   },
-  successSub: {
+  dividerLine: {
+    flex: 1,
+    height: '1px',
+    backgroundColor: '#E8E4DE',
+  },
+  dividerText: {
     fontFamily: "'DM Sans', sans-serif",
-    fontSize: '14px',
-    fontWeight: '300',
-    color: '#6B6560',
-    textAlign: 'center',
-    marginTop: '12px',
+    fontSize: '11px',
+    color: '#9B9590',
+    letterSpacing: '0.08em',
+    textTransform: 'uppercase',
+  },
+  googleBtn: {
+    width: '100%',
+    padding: '14px',
+    fontFamily: "'DM Sans', sans-serif",
+    fontSize: '13px',
+    fontWeight: '400',
+    letterSpacing: '0.04em',
+    color: '#1A1A1A',
+    backgroundColor: '#FAF8F5',
+    border: '1px solid #E8E4DE',
+    borderRadius: '2px',
+    cursor: 'pointer',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: '10px',
   },
   error: {
     fontFamily: "'DM Sans', sans-serif",
@@ -120,135 +127,142 @@ const styles = {
     borderRadius: '2px',
     border: '1px solid #F5C6C0',
   },
+  success: {
+    fontFamily: "'DM Sans', sans-serif",
+    fontSize: '13px',
+    color: '#27AE60',
+    backgroundColor: '#EDFAF3',
+    padding: '12px 16px',
+    borderRadius: '2px',
+    border: '1px solid #B7EAD0',
+  },
+  toggle: {
+    fontFamily: "'DM Sans', sans-serif",
+    fontSize: '13px',
+    fontWeight: '300',
+    color: '#6B6560',
+    textAlign: 'center',
+    marginTop: '24px',
+  },
+  toggleLink: {
+    color: '#1A1A1A',
+    fontWeight: '500',
+    cursor: 'pointer',
+    borderBottom: '1px solid #1A1A1A',
+    paddingBottom: '1px',
+  },
 }
 
-export default function RequestAccess() {
-  const [form, setForm] = useState({
-    name: '',
-    email: '',
-    instagram: '',
-    city: '',
-    why: '',
-  })
+export default function Login() {
+  const [mode, setMode] = useState('login')
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
-  const [submitted, setSubmitted] = useState(false)
   const [error, setError] = useState('')
-
-  function handleChange(e) {
-    setForm({ ...form, [e.target.name]: e.target.value })
-  }
+  const [success, setSuccess] = useState('')
+  const navigate = useNavigate()
 
   async function handleSubmit(e) {
     e.preventDefault()
     setLoading(true)
     setError('')
+    setSuccess('')
 
-    const { error } = await supabase
-      .from('curator_requests')
-      .insert([form])
-
-    if (error) {
-      setError('Something went wrong. Try again.')
+    if (mode === 'login') {
+      const { error } = await supabase.auth.signInWithPassword({ email, password })
+      if (error) {
+        setError(error.message)
+      } else {
+        navigate('/curator')
+      }
     } else {
-      setSubmitted(true)
+      const { error } = await supabase.auth.signUp({ email, password })
+      if (error) {
+        setError(error.message)
+      } else {
+        setSuccess('Account created! Check your email to confirm.')
+      }
     }
     setLoading(false)
   }
 
-  if (submitted) {
-    return (
-      <main style={styles.page}>
-        <p style={styles.success}>
-          "You're on our radar."
-        </p>
-        <p style={styles.successSub}>
-          We review every request personally. If you're the right fit,
-          you'll hear from us soon.
-        </p>
-      </main>
-    )
+  async function handleGoogle() {
+    await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: { redirectTo: `${window.location.origin}/curator` },
+    })
   }
 
   return (
-    <main style={styles.page}>
-      <p style={styles.eyebrow}>For tastemakers & curators</p>
-      <h1 style={styles.headline}>
-        Want to share<br />
-        your city?
-      </h1>
-      <p style={styles.sub}>
-        Get Lored is invite-only on the curator side. We handpick DJs,
-        event promoters, and cultural insiders who know their cities better
-        than anyone. If that's you — apply below.
-      </p>
+    <div style={styles.page}>
+      <div style={styles.card}>
+        <p style={styles.eyebrow}>Welcome back</p>
+        <h1 style={styles.headline}>
+          {mode === 'login' ? 'Sign in.' : 'Join.'}
+        </h1>
+        <p style={styles.sub}>
+          {mode === 'login'
+            ? 'Sign in to access your curator portal.'
+            : 'Create an account to get started.'}
+        </p>
 
-      {error && <p style={styles.error}>{error}</p>}
+        {error && <p style={styles.error}>{error}</p>}
+        {success && <p style={styles.success}>{success}</p>}
 
-      <form style={styles.form} onSubmit={handleSubmit}>
-        <div style={styles.fieldGroup}>
-          <label style={styles.label}>Full name</label>
-          <input
-            style={styles.input}
-            name="name"
-            value={form.name}
-            onChange={handleChange}
-            placeholder="DJ King Iven"
-            required
-          />
+        <form style={styles.form} onSubmit={handleSubmit}>
+          <div>
+            <label style={styles.label}>Email</label>
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              style={styles.input}
+              placeholder="you@example.com"
+              required
+            />
+          </div>
+          <div>
+            <label style={styles.label}>Password</label>
+            <input
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              style={styles.input}
+              placeholder="••••••••"
+              required
+            />
+          </div>
+          <button type="submit" style={styles.button} disabled={loading}>
+            {loading ? 'One moment...' : mode === 'login' ? 'Sign in' : 'Create account'}
+          </button>
+        </form>
+
+        <div style={styles.divider}>
+          <div style={styles.dividerLine} />
+          <span style={styles.dividerText}>or</span>
+          <div style={styles.dividerLine} />
         </div>
 
-        <div style={styles.fieldGroup}>
-          <label style={styles.label}>Email</label>
-          <input
-            style={styles.input}
-            name="email"
-            type="email"
-            value={form.email}
-            onChange={handleChange}
-            placeholder="you@example.com"
-            required
-          />
-        </div>
-
-        <div style={styles.fieldGroup}>
-          <label style={styles.label}>Instagram handle</label>
-          <input
-            style={styles.input}
-            name="instagram"
-            value={form.instagram}
-            onChange={handleChange}
-            placeholder="@yourhandle"
-          />
-        </div>
-
-        <div style={styles.fieldGroup}>
-          <label style={styles.label}>Your city</label>
-          <input
-            style={styles.input}
-            name="city"
-            value={form.city}
-            onChange={handleChange}
-            placeholder="Charlotte, Miami, London..."
-            required
-          />
-        </div>
-
-        <div style={styles.fieldGroup}>
-          <label style={styles.label}>Why are you the right fit?</label>
-          <textarea
-            style={styles.textarea}
-            name="why"
-            value={form.why}
-            onChange={handleChange}
-            placeholder="Tell us about your scene, your audience, and what you'd bring to Get Lored..."
-            required
-          />
-        </div>
-
-        <button type="submit" style={styles.button} disabled={loading}>
-          {loading ? 'Submitting...' : 'Request access'}
+        <button style={styles.googleBtn} onClick={handleGoogle}>
+          <svg width="18" height="18" viewBox="0 0 18 18">
+            <path fill="#4285F4" d="M16.51 8H8.98v3h4.3c-.18 1-.74 1.48-1.6 2.04v2.01h2.6a7.8 7.8 0 002.38-5.88c0-.57-.05-.66-.15-1.18z"/>
+            <path fill="#34A853" d="M8.98 17c2.16 0 3.97-.72 5.3-1.94l-2.6-2a4.8 4.8 0 01-7.18-2.54H1.83v2.07A8 8 0 008.98 17z"/>
+            <path fill="#FBBC05" d="M4.5 10.52a4.8 4.8 0 010-3.04V5.41H1.83a8 8 0 000 7.18l2.67-2.07z"/>
+            <path fill="#EA4335" d="M8.98 4.18c1.17 0 2.23.4 3.06 1.2l2.3-2.3A8 8 0 001.83 5.4L4.5 7.49a4.77 4.77 0 014.48-3.3z"/>
+          </svg>
+          Continue with Google
         </button>
-      </form>
-    </main>
+
+        <p style={styles.toggle}>
+          {mode === 'login' ? "Don't have an account? " : 'Already have an account? '}
+          <span
+            style={styles.toggleLink}
+            onClick={() => { setMode(mode === 'login' ? 'signup' : 'login'); setError(''); setSuccess('') }}
+          >
+            {mode === 'login' ? 'Sign up' : 'Sign in'}
+          </span>
+        </p>
+      </div>
+    </div>
   )
 }
