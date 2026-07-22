@@ -185,6 +185,7 @@ export default function CuratorPortal() {
   const [placeScreenshotPreview, setPlaceScreenshotPreview] = useState(null)
   const [placeScanning, setPlaceScanning] = useState(false)
   const [placeReviewFields, setPlaceReviewFields] = useState([])
+  const [placeDragActive, setPlaceDragActive] = useState(false)
 
   const [submitting, setSubmitting] = useState(false)
   const [scanning, setScanning] = useState(false)
@@ -395,6 +396,23 @@ export default function CuratorPortal() {
 
   function handlePlaceScreenshotChange(e) {
     const file = e.target.files[0]
+    processPlaceScreenshotFile(file)
+  }
+
+  function handlePlaceDragOver(e) {
+    e.preventDefault()
+    setPlaceDragActive(true)
+  }
+
+  function handlePlaceDragLeave(e) {
+    e.preventDefault()
+    setPlaceDragActive(false)
+  }
+
+  function handlePlaceDrop(e) {
+    e.preventDefault()
+    setPlaceDragActive(false)
+    const file = e.dataTransfer.files?.[0]
     processPlaceScreenshotFile(file)
   }
 
@@ -1069,12 +1087,17 @@ export default function CuratorPortal() {
 
               {!editingPlaceId && (
                 <>
-                  <label style={s.flyerBox}>
+                  <label
+                    style={placeDragActive ? { ...s.flyerBox, ...s.flyerBoxActive } : s.flyerBox}
+                    onDragOver={handlePlaceDragOver}
+                    onDragLeave={handlePlaceDragLeave}
+                    onDrop={handlePlaceDrop}
+                  >
                     {placeScreenshotPreview ? (
                       <img src={placeScreenshotPreview} alt="Screenshot preview" style={s.flyerPreview} />
                     ) : (
                       <>
-                        <p style={s.flyerLabel}>Upload a screenshot of the place (IG post, Google Maps, review site)</p>
+                        <p style={s.flyerLabel}>Drag & drop a screenshot here, or click to upload (IG post, Google Maps, review site)</p>
                         <p style={s.flyerHint}>JPG or PNG</p>
                       </>
                     )}
