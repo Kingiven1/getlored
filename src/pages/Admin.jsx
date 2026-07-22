@@ -31,6 +31,61 @@ const s = {
   loading: { textAlign: 'center', padding: '120px 32px', fontFamily: "'DM Sans', sans-serif", fontSize: '13px', color: '#9B9590' },
   why: { maxWidth: '260px', whiteSpace: 'pre-wrap', lineHeight: '1.5' },
   success: { fontFamily: "'DM Sans', sans-serif", fontSize: '13px', color: '#27AE60', backgroundColor: '#EDFAF3', padding: '12px 16px', borderRadius: '2px', border: '1px solid #B7EAD0', marginBottom: '24px' },
+  errorMsg: { fontFamily: "'DM Sans', sans-serif", fontSize: '13px', color: '#C0392B', backgroundColor: '#FDF0EE', padding: '12px 16px', borderRadius: '2px', border: '1px solid #F5C6C0', marginBottom: '24px' },
+}
+
+function RequestRow({ request, onApprove, onReject }) {
+  return (
+    <tr>
+      <td style={s.td}>{request.name}</td>
+      <td style={s.td}>{request.email}</td>
+      <td style={s.td}>{request.city}</td>
+      <td style={s.tdMuted}>{request.instagram}</td>
+      <td style={s.td}>
+        {request.wants_events && <span style={{ ...s.badge, ...s.badgeEvents }}>Events</span>}
+        {request.wants_places && <span style={{ ...s.badge, ...s.badgePlaces }}>Places</span>}
+      </td>
+      <td style={s.td}><div style={s.why}>{request.why}</div></td>
+      <td style={s.td}>
+        <button type="button" style={s.approveBtn} onClick={() => onApprove(request)}>Approve</button>
+        <button type="button" style={s.rejectBtn} onClick={() => onReject(request)}>Reject</button>
+      </td>
+    </tr>
+  )
+}
+
+function CuratorRow({ curator, onTogglePortal }) {
+  const isAdmin = curator.role === 'admin'
+  return (
+    <tr>
+      <td style={s.td}>{curator.name}</td>
+      <td style={s.td}>{curator.city}</td>
+      <td style={s.tdMuted}>{curator.instagram}</td>
+      <td style={s.td}>{curator.role}</td>
+      <td style={s.td}>
+        <span style={{ ...s.badge, ...(curator.can_events ? s.badgeApproved : s.badgePending) }}>
+          Events: {curator.can_events ? 'On' : 'Off'}
+        </span>
+        <span style={{ ...s.badge, ...(curator.can_places ? s.badgeApproved : s.badgePending) }}>
+          Places: {curator.can_places ? 'On' : 'Off'}
+        </span>
+      </td>
+      <td style={s.td}>
+        {isAdmin ? (
+          <span style={s.tdMuted}>Admin</span>
+        ) : (
+          <>
+            <button type="button" style={s.revokeBtn} onClick={() => onTogglePortal(curator, 'can_events')}>
+              {curator.can_events ? 'Revoke Events' : 'Grant Events'}
+            </button>
+            <button type="button" style={s.revokeBtn} onClick={() => onTogglePortal(curator, 'can_places')}>
+              {curator.can_places ? 'Revoke Places' : 'Grant Places'}
+            </button>
+          </>
+        )}
+      </td>
+    </tr>
+  )
 }
 
 export default function Admin() {
@@ -41,58 +96,78 @@ export default function Admin() {
   const [requests, setRequests] = useState([])
   const [curators, setCurators] = useState([])
   const [successMsg, setSuccessMsg] = useState('')
+  const [errorMsg, setErrorMsg] = useState('')
   const navigate = useNavigate()
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session?.user) {
-        setUser(session.user)
-        checkAdmin(session.user.id)
-      } else {
-        setLoading(false)
-      }
-    })
-  }, [])
+    let active = true
 
-  async function checkAdmin(userId) {
-    try {
-      const { data } = await supabase
+    async function init() {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!active) return
+
+      if (!session?.user) {
+        setLoading(false)
+        return
+      }
+
+      setUser(session.user)
+
+      const { data: curatorRow } = await supabase
         .from('curators')
         .select('role, approved')
-        .eq('user_id', userId)
+        .eq('user_id', session.user.id)
         .single()
-      const admin = data?.role === 'admin' && data?.approved === true
+
+      if (!active) return
+
+      const admin = curatorRow?.role === 'admin' && curatorRow?.approved === true
       setIsAdmin(admin)
+
       if (admin) {
-        await fetchRequests()
-        await fetchCurators()
+        await Promise.all([fetchRequests(), fetchCurators()])
       }
-    } catch (e) {
-      console.error(e)
-    } finally {
+
       setLoading(false)
     }
-  }
+
+    init()
+    return () => { active = false }
+  }, [])
 
   async function fetchRequests() {
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('curator_requests')
       .select('*')
       .eq('status', 'pending')
       .order('created_at', { ascending: false })
+    if (error) { console.error(error); return }
     setRequests(data || [])
   }
 
   async function fetchCurators() {
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('curators')
       .select('*')
       .order('created_at', { ascending: false })
+    if (error) { console.error(error); return }
     setCurators(data || [])
   }
 
+  function flashSuccess(msg) {
+    setSuccessMsg(msg)
+    setErrorMsg('')
+    setTimeout(() => setSuccessMsg(''), 3000)
+  }
+
+  function flashError(msg) {
+    setErrorMsg(msg)
+    setSuccessMsg('')
+    setTimeout(() => setErrorMsg(''), 4000)
+  }
+
   async function handleApprove(request) {
-    const { error } = await supabase.from('curators').insert([{
+    const { error: insertError } = await supabase.from('curators').insert([{
       user_id: request.user_id,
       name: request.name,
       city: request.city,
@@ -102,20 +177,39 @@ export default function Admin() {
       can_events: !!request.wants_events,
       can_places: !!request.wants_places,
     }])
-    if (!error) {
-      await supabase.from('curator_requests').update({ status: 'approved' }).eq('id', request.id)
-      setSuccessMsg(`${request.name} approved.`)
-      fetchRequests()
-      fetchCurators()
-      setTimeout(() => setSuccessMsg(''), 3000)
+
+    if (insertError) {
+      flashError(`Could not approve ${request.name}: ${insertError.message}`)
+      return
     }
+
+    const { error: updateError } = await supabase
+      .from('curator_requests')
+      .update({ status: 'approved' })
+      .eq('id', request.id)
+
+    if (updateError) {
+      flashError(`Approved curator but failed to update request status.`)
+      return
+    }
+
+    flashSuccess(`${request.name} approved.`)
+    await Promise.all([fetchRequests(), fetchCurators()])
   }
 
   async function handleReject(request) {
-    await supabase.from('curator_requests').update({ status: 'rejected' }).eq('id', request.id)
-    setSuccessMsg(`${request.name}'s request rejected.`)
-    fetchRequests()
-    setTimeout(() => setSuccessMsg(''), 3000)
+    const { error } = await supabase
+      .from('curator_requests')
+      .update({ status: 'rejected' })
+      .eq('id', request.id)
+
+    if (error) {
+      flashError(`Could not reject ${request.name}: ${error.message}`)
+      return
+    }
+
+    flashSuccess(`${request.name}'s request rejected.`)
+    await fetchRequests()
   }
 
   async function handleTogglePortal(curator, field) {
@@ -123,11 +217,14 @@ export default function Admin() {
       .from('curators')
       .update({ [field]: !curator[field] })
       .eq('id', curator.id)
-    if (!error) {
-      setSuccessMsg(`${curator.name}'s access updated.`)
-      fetchCurators()
-      setTimeout(() => setSuccessMsg(''), 3000)
+
+    if (error) {
+      flashError(`Could not update ${curator.name}'s access.`)
+      return
     }
+
+    flashSuccess(`${curator.name}'s access updated.`)
+    await fetchCurators()
   }
 
   async function handleSignOut() {
@@ -135,7 +232,9 @@ export default function Admin() {
     navigate('/')
   }
 
-  if (loading) return <p style={s.loading}>Loading dashboard...</p>
+  if (loading) {
+    return <p style={s.loading}>Loading dashboard...</p>
+  }
 
   if (!user || !isAdmin) {
     return (
@@ -154,24 +253,30 @@ export default function Admin() {
           <h1 style={s.headline}>Dashboard.</h1>
           <p style={s.sub}>Manage curator requests and approved curators.</p>
         </div>
-        <button style={s.signOutBtn} onClick={handleSignOut}>Sign out</button>
+        <button type="button" style={s.signOutBtn} onClick={handleSignOut}>Sign out</button>
       </div>
 
       {successMsg && <p style={s.success}>{successMsg}</p>}
+      {errorMsg && <p style={s.errorMsg}>{errorMsg}</p>}
 
       <div style={s.tabs}>
-        {['requests', 'curators'].map(tab => (
-          <button
-            key={tab}
-            style={activeTab === tab ? { ...s.tab, ...s.tabActive } : s.tab}
-            onClick={() => setActiveTab(tab)}
-          >
-            {tab === 'requests' ? `Pending requests (${requests.length})` : `Curators (${curators.length})`}
-          </button>
-        ))}
+        <button
+          type="button"
+          style={activeTab === 'requests' ? { ...s.tab, ...s.tabActive } : s.tab}
+          onClick={() => setActiveTab('requests')}
+        >
+          Pending requests ({requests.length})
+        </button>
+        <button
+          type="button"
+          style={activeTab === 'curators' ? { ...s.tab, ...s.tabActive } : s.tab}
+          onClick={() => setActiveTab('curators')}
+        >
+          Curators ({curators.length})
+        </button>
       </div>
 
-      {activeTab === 'requests' ? (
+      {activeTab === 'requests' && (
         requests.length === 0 ? (
           <p style={s.empty}>No pending requests.</p>
         ) : (
@@ -189,26 +294,14 @@ export default function Admin() {
             </thead>
             <tbody>
               {requests.map(r => (
-                <tr key={r.id}>
-                  <td style={s.td}>{r.name}</td>
-                  <td style={s.td}>{r.email}</td>
-                  <td style={s.td}>{r.city}</td>
-                  <td style={s.tdMuted}>{r.instagram}</td>
-                  <td style={s.td}>
-                    {r.wants_events && <span style={{ ...s.badge, ...s.badgeEvents }}>Events</span>}
-                    {r.wants_places && <span style={{ ...s.badge, ...s.badgePlaces }}>Places</span>}
-                  </td>
-                  <td style={s.td}><div style={s.why}>{r.why}</div></td>
-                  <td style={s.td}>
-                    <button style={s.approveBtn} onClick={() => handleApprove(r)}>Approve</button>
-                    <button style={s.rejectBtn} onClick={() => handleReject(r)}>Reject</button>
-                  </td>
-                </tr>
+                <RequestRow key={r.id} request={r} onApprove={handleApprove} onReject={handleReject} />
               ))}
             </tbody>
           </table>
         )
-      ) : (
+      )}
+
+      {activeTab === 'curators' && (
         curators.length === 0 ? (
           <p style={s.empty}>No curators yet.</p>
         ) : (
@@ -225,33 +318,7 @@ export default function Admin() {
             </thead>
             <tbody>
               {curators.map(c => (
-                <tr key={c.id}>
-                  <td style={s.td}>{c.name}</td>
-                  <td style={s.td}>{c.city}</td>
-                  <td style={s.tdMuted}>{c.instagram}</td>
-                  <td style={s.td}>{c.role}</td>
-                  <td style={s.td}>
-                    <span style={{ ...s.badge, ...(c.can_events ? s.badgeApproved : s.badgePending) }}>
-                      Events: {c.can_events ? 'On' : 'Off'}
-                    </span>
-                    <span style={{ ...s.badge, ...(c.can_places ? s.badgeApproved : s.badgePending) }}>
-                      Places: {c.can_places ? 'On' : 'Off'}
-                    </span>
-                  </td>
-                  <td style={s.td}>
-                    {c.role !== 'admin' && (
-                      <>
-                        <button style={s.revokeBtn} onClick={() => handleTogglePortal(c, 'can_events')}>
-                          {c.can_events ? 'Revoke Events' : 'Grant Events'}
-                        </button>
-                        <button style={s.revokeBtn} onClick={() => handleTogglePortal(c, 'can_places')}>
-                          {c.can_places ? 'Revoke Places' : 'Grant Places'}
-                        </button>
-                      </>
-                    )}
-                    {c.role === 'admin' && <span style={s.tdMuted}>Admin</span>}
-                  </td>
-                </tr>
+                <CuratorRow key={c.id} curator={c} onTogglePortal={handleTogglePortal} />
               ))}
             </tbody>
           </table>
