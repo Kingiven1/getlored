@@ -14,7 +14,8 @@ const s = {
   metaLabel: { fontFamily: "'DM Sans', sans-serif", fontSize: '10px', fontWeight: '500', letterSpacing: '0.12em', textTransform: 'uppercase', color: '#9B9590' },
   metaValue: { fontFamily: "'DM Sans', sans-serif", fontSize: '15px', fontWeight: '400', color: '#1A1A1A' },
   description: { fontFamily: "'DM Sans', sans-serif", fontSize: '15px', fontWeight: '300', lineHeight: '1.8', color: '#4A4540', marginBottom: '40px' },
-  flyer: { width: '100%', borderRadius: '2px', marginBottom: '40px', display: 'block' },
+  flyerWrap: { width: '100%', maxWidth: '480px', height: '480px', margin: '0 auto 40px', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#F2EEE9', borderRadius: '4px', overflow: 'hidden' },
+  flyer: { maxWidth: '100%', maxHeight: '100%', objectFit: 'contain', display: 'block' },
   ticketBtn: { display: 'inline-block', fontFamily: "'DM Sans', sans-serif", fontSize: '13px', fontWeight: '500', letterSpacing: '0.06em', textTransform: 'uppercase', color: '#FAF8F5', backgroundColor: '#1A1A1A', padding: '14px 32px', borderRadius: '2px', marginRight: '16px' },
   mapsBtn: { display: 'inline-block', fontFamily: "'DM Sans', sans-serif", fontSize: '13px', fontWeight: '400', letterSpacing: '0.06em', textTransform: 'uppercase', color: '#6B6560', borderBottom: '1px solid #6B6560', paddingBottom: '2px' },
   loading: { fontFamily: "'DM Sans', sans-serif", fontSize: '13px', color: '#9B9590', textAlign: 'center', padding: '80px 0' },
@@ -49,7 +50,11 @@ export default function EventDetail() {
       <Link to={'/cities/' + (event.city || '').toLowerCase().replace(' ', '-')} style={s.back}>
         Back to {event.city}
       </Link>
-      {event.flyer_url && <img src={event.flyer_url} alt={event.title} style={s.flyer} />}
+      {event.flyer_url && (
+        <div style={s.flyerWrap}>
+          <img src={event.flyer_url} alt={event.title} style={s.flyer} />
+        </div>
+      )}
       <p style={s.eyebrow}>{event.genre || 'Event'}</p>
       <h1 style={s.headline}>{event.title}</h1>
       <p style={s.venue}>{event.venue}</p>
