@@ -1,8 +1,8 @@
-import { Link } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 
 const s = {
   page: { maxWidth: '760px', margin: '0 auto', padding: '64px 32px 96px' },
-  back: { fontFamily: "'DM Sans', sans-serif", fontSize: '12px', textTransform: 'uppercase', color: '#9B9590', marginBottom: '40px', display: 'inline-block', letterSpacing: '0.08em' },
+  back: { fontFamily: "'DM Sans', sans-serif", fontSize: '12px', textTransform: 'uppercase', color: '#9B9590', marginBottom: '40px', display: 'inline-block', letterSpacing: '0.08em', background: 'none', border: 'none', cursor: 'pointer', padding: 0 },
   eyebrow: { fontFamily: "'DM Sans', sans-serif", fontSize: '11px', fontWeight: '500', letterSpacing: '0.12em', textTransform: 'uppercase', color: '#B07D62', marginBottom: '16px' },
   headline: { fontFamily: "'Cormorant Garamond', serif", fontSize: 'clamp(36px, 5vw, 56px)', fontWeight: '500', color: '#1A1A1A', marginBottom: '8px', lineHeight: '1.1' },
   updated: { fontFamily: "'DM Sans', sans-serif", fontSize: '13px', color: '#9B9590', marginBottom: '48px' },
@@ -15,9 +15,19 @@ const s = {
 }
 
 export default function TermsOfService() {
+  const navigate = useNavigate()
+
+  function handleBack() {
+    if (window.history.length > 1) {
+      navigate(-1)
+    } else {
+      navigate('/login')
+    }
+  }
+
   return (
     <main style={s.page}>
-      <Link to="/" style={s.back}>Back to Get Lored</Link>
+      <button type="button" style={s.back} onClick={handleBack}>← Back</button>
       <p style={s.eyebrow}>Legal</p>
       <h1 style={s.headline}>Terms of Service.</h1>
       <p style={s.updated}>Last updated: July 2026</p>
