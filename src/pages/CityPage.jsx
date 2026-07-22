@@ -59,6 +59,7 @@ export default function CityPage() {
     cardDate: { fontFamily: "'DM Sans', sans-serif", fontSize: '11px', textTransform: 'uppercase', color: '#B07D62', marginBottom: '10px', letterSpacing: '0.1em' },
     cardTitle: { fontFamily: "'Cormorant Garamond', serif", fontSize: '26px', fontWeight: '500', color: '#1A1A1A', marginBottom: '6px' },
     cardSub: { fontFamily: "'DM Sans', sans-serif", fontSize: '13px', fontWeight: '300', color: '#6B6560', marginBottom: '16px' },
+    tagRow: { display: 'flex', gap: '8px', flexWrap: 'wrap' },
     tag: { display: 'inline-block', fontFamily: "'DM Sans', sans-serif", fontSize: '10px', textTransform: 'uppercase', color: '#9B9590', border: '1px solid #D8D4CE', padding: '4px 10px', borderRadius: '2px', letterSpacing: '0.1em' },
     empty: { fontFamily: "'Cormorant Garamond', serif", fontSize: '24px', fontStyle: 'italic', color: '#9B9590', textAlign: 'center', padding: '80px 0' },
     loading: { fontFamily: "'DM Sans', sans-serif", fontSize: '13px', color: '#9B9590', textAlign: 'center', padding: '80px 0' },
@@ -97,7 +98,10 @@ export default function CityPage() {
                 <p style={s.cardDate}>{p.category}</p>
                 <h2 style={s.cardTitle}>{p.name}</h2>
                 <p style={s.cardSub}>{p.address}</p>
-                {p.google_maps_url && <a href={p.google_maps_url} target="_blank" rel="noopener noreferrer" style={s.tag}>View on Maps</a>}
+                <div style={s.tagRow}>
+                  {p.website && <a href={p.website} target="_blank" rel="noopener noreferrer" style={s.tag}>Website</a>}
+                  {p.google_maps_url && <a href={p.google_maps_url} target="_blank" rel="noopener noreferrer" style={s.tag}>View on Maps</a>}
+                </div>
               </div>
             ))}
           </div>
