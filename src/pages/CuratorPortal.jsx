@@ -13,6 +13,16 @@ const SUPPORTED_CITIES = [
   { city: 'Amsterdam', country: 'Netherlands' },
 ]
 
+const DINING_STYLES = [
+  'Fine Dining',
+  'Casual Dining',
+  'Brunch & Breakfast',
+  'Bakery & Café',
+  'Steakhouse',
+  'Bar & Lounge',
+  'Pizzeria',
+]
+
 function matchSupportedCity(detected) {
   if (!detected) return null
   const cleaned = detected.trim().toLowerCase()
@@ -27,7 +37,7 @@ const emptyEvent = {
 }
 
 const emptyPlace = {
-  name: '', category: 'restaurant', address: '', city: '', country: '',
+  name: '', category: 'restaurant', dining_style: '', address: '', city: '', country: '',
   description: '', google_maps_url: '', website: '',
 }
 
@@ -438,6 +448,10 @@ export default function CuratorPortal() {
       setError('Please select a city from the list.')
       return
     }
+    if (!placeForm.dining_style) {
+      setError('Please select a dining style.')
+      return
+    }
     setSubmitting(true)
     setError('')
     setSuccess('')
@@ -788,15 +802,26 @@ export default function CuratorPortal() {
                 <label style={s.label}>Name</label>
                 <input style={s.input} name="name" value={placeForm.name} onChange={handlePlaceChange} placeholder="Place name" required />
               </div>
-              <div style={s.fieldGroup}>
-                <label style={s.label}>Category</label>
-                <select style={s.select} name="category" value={placeForm.category} onChange={handlePlaceChange}>
-                  <option value="restaurant">Restaurant</option>
-                  <option value="coffee">Coffee shop</option>
-                  <option value="bar">Bar</option>
-                  <option value="music_venue">Music venue</option>
-                  <option value="attraction">Attraction</option>
-                </select>
+              <div style={s.row}>
+                <div style={s.fieldGroup}>
+                  <label style={s.label}>Category</label>
+                  <select style={s.select} name="category" value={placeForm.category} onChange={handlePlaceChange}>
+                    <option value="restaurant">Restaurant</option>
+                    <option value="coffee">Coffee shop</option>
+                    <option value="bar">Bar</option>
+                    <option value="music_venue">Music venue</option>
+                    <option value="attraction">Attraction</option>
+                  </select>
+                </div>
+                <div style={s.fieldGroup}>
+                  <label style={s.label}>Dining style</label>
+                  <select style={s.select} name="dining_style" value={placeForm.dining_style} onChange={handlePlaceChange} required>
+                    <option value="">Select style</option>
+                    {DINING_STYLES.map(style => (
+                      <option key={style} value={style}>{style}</option>
+                    ))}
+                  </select>
+                </div>
               </div>
               <div style={s.fieldGroup}>
                 <label style={s.label}>Address</label>
