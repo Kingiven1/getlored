@@ -2,6 +2,8 @@ import { useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase.js'
 
+const INTEREST_OPTIONS = ['Nightlife', 'Restaurants', 'Cultural Events']
+
 const s = {
   page: { minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '32px', backgroundColor: '#FAF8F5' },
   card: { width: '100%', maxWidth: '420px' },
@@ -28,6 +30,8 @@ const s = {
   checkbox: { marginTop: '3px', flexShrink: 0, width: '15px', height: '15px', cursor: 'pointer', accentColor: '#1A1A1A' },
   checkboxLabel: { fontFamily: "'DM Sans', sans-serif", fontSize: '12px', fontWeight: '300', color: '#6B6560', lineHeight: '1.5', cursor: 'pointer' },
   checkboxLink: { color: '#B07D62', borderBottom: '1px solid #B07D62', paddingBottom: '1px' },
+  interestGroup: { display: 'flex', flexDirection: 'column', gap: '8px' },
+  interestRow: { display: 'flex', alignItems: 'center', gap: '8px' },
 }
 
 export default function Login() {
@@ -35,6 +39,8 @@ export default function Login() {
   const [form, setForm] = useState({ email: '', password: '', confirmPassword: '', name: '', city: '', instagram: '' })
   const [agreedToPolicy, setAgreedToPolicy] = useState(false)
   const [marketingOptIn, setMarketingOptIn] = useState(false)
+  const [isInfluencer, setIsInfluencer] = useState(false)
+  const [interests, setInterests] = useState([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
@@ -42,6 +48,12 @@ export default function Login() {
 
   function handleChange(e) {
     setForm({ ...form, [e.target.name]: e.target.value })
+  }
+
+  function toggleInterest(option) {
+    setInterests(prev =>
+      prev.includes(option) ? prev.filter(i => i !== option) : [...prev, option]
+    )
   }
 
   async function handleSubmit(e) {
@@ -92,6 +104,9 @@ export default function Login() {
             email_opt_in: marketingOptIn,
             opted_in_at: marketingOptIn ? new Date().toISOString() : null,
             consent_version: 'v1',
+            audience_type: isInfluencer ? 'influencer' : 'general',
+            home_city: form.city,
+            interests: interests,
           }])
         }
         setSuccess('Welcome to Get Lored.')
@@ -168,6 +183,35 @@ export default function Login() {
 
           {mode === 'signup' && (
             <>
+              <div>
+                <label style={s.label}>What are you into?</label>
+                <div style={s.interestGroup}>
+                  {INTEREST_OPTIONS.map(option => (
+                    <label key={option} style={s.interestRow}>
+                      <input
+                        type="checkbox"
+                        style={s.checkbox}
+                        checked={interests.includes(option)}
+                        onChange={() => toggleInterest(option)}
+                      />
+                      <span style={s.checkboxLabel}>{option}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              <label style={s.checkboxRow}>
+                <input
+                  type="checkbox"
+                  style={s.checkbox}
+                  checked={isInfluencer}
+                  onChange={(e) => setIsInfluencer(e.target.checked)}
+                />
+                <span style={s.checkboxLabel}>
+                  I'm a content creator / influencer.
+                </span>
+              </label>
+
               <label style={s.checkboxRow}>
                 <input
                   type="checkbox"
