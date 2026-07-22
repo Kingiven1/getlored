@@ -14,6 +14,7 @@ const s = {
   inputError: { border: '1px solid #C0392B' },
   textarea: { width: '100%', padding: '12px 16px', fontFamily: "'DM Sans', sans-serif", fontSize: '14px', fontWeight: '300', color: '#1A1A1A', backgroundColor: '#F2EEE9', border: '1px solid #E8E4DE', borderRadius: '2px', outline: 'none', boxSizing: 'border-box', resize: 'vertical', minHeight: '120px', lineHeight: '1.6' },
   button: { width: '100%', padding: '14px', fontFamily: "'DM Sans', sans-serif", fontSize: '13px', fontWeight: '500', letterSpacing: '0.06em', textTransform: 'uppercase', color: '#FAF8F5', backgroundColor: '#1A1A1A', border: 'none', borderRadius: '2px', cursor: 'pointer', marginTop: '8px' },
+  buttonDisabled: { opacity: 0.5, cursor: 'not-allowed' },
   divider: { height: '1px', backgroundColor: '#E8E4DE', margin: '16px 0' },
   dividerLabel: { fontFamily: "'DM Sans', sans-serif", fontSize: '11px', fontWeight: '500', letterSpacing: '0.1em', textTransform: 'uppercase', color: '#9B9590', marginBottom: '24px', marginTop: '8px' },
   error: { fontFamily: "'DM Sans', sans-serif", fontSize: '13px', color: '#C0392B', backgroundColor: '#FDF0EE', padding: '12px 16px', borderRadius: '2px', border: '1px solid #F5C6C0' },
@@ -29,6 +30,10 @@ const s = {
   portalCardActive: { border: '1px solid #1A1A1A', backgroundColor: '#FAF8F5' },
   portalCardTitle: { fontFamily: "'Cormorant Garamond', serif", fontSize: '20px', fontWeight: '500', color: '#1A1A1A', marginBottom: '4px' },
   portalCardSub: { fontFamily: "'DM Sans', sans-serif", fontSize: '12px', fontWeight: '300', color: '#6B6560', lineHeight: '1.5' },
+  checkboxRow: { display: 'flex', alignItems: 'flex-start', gap: '10px' },
+  checkbox: { marginTop: '3px', flexShrink: 0, width: '15px', height: '15px', cursor: 'pointer', accentColor: '#1A1A1A' },
+  checkboxLabel: { fontFamily: "'DM Sans', sans-serif", fontSize: '12px', fontWeight: '300', color: '#6B6560', lineHeight: '1.5', cursor: 'pointer' },
+  checkboxLink: { color: '#B07D62', borderBottom: '1px solid #B07D62', paddingBottom: '1px' },
 }
 
 export default function RequestAccess() {
@@ -38,6 +43,8 @@ export default function RequestAccess() {
   })
   const [wantsEvents, setWantsEvents] = useState(false)
   const [wantsPlaces, setWantsPlaces] = useState(false)
+  const [agreedToPolicy, setAgreedToPolicy] = useState(false)
+  const [marketingOptIn, setMarketingOptIn] = useState(false)
   const [loading, setLoading] = useState(false)
   const [submitted, setSubmitted] = useState(false)
   const [error, setError] = useState('')
@@ -66,12 +73,28 @@ export default function RequestAccess() {
       setError('Select at least one portal to apply for.')
       return
     }
+    if (!form.name.trim()) {
+      setError('Please enter your full name.')
+      return
+    }
+    if (!form.city.trim()) {
+      setError('Please enter your city.')
+      return
+    }
+    if (!form.why.trim()) {
+      setError('Please tell us why you\'re the right fit.')
+      return
+    }
     if (form.password.length < 8) {
       setError('Password must be at least 8 characters.')
       return
     }
     if (form.password !== form.confirmPassword) {
       setError('Passwords do not match.')
+      return
+    }
+    if (!agreedToPolicy) {
+      setError('Please acknowledge the Privacy Policy to continue.')
       return
     }
 
@@ -114,10 +137,23 @@ export default function RequestAccess() {
       return
     }
 
+    if (data.user?.id) {
+      await supabase.from('marketing_consent').insert([{
+        user_id: data.user.id,
+        email: form.email,
+        email_opt_in: marketingOptIn,
+        opted_in_at: marketingOptIn ? new Date().toISOString() : null,
+        consent_version: 'v1',
+      }])
+    }
+
     await supabase.auth.signOut()
     setSubmitted(true)
     setLoading(false)
   }
+
+  const canSubmit = wantsEvents || wantsPlaces
+  const submitDisabled = loading || !agreedToPolicy || !canSubmit
 
   if (submitted) {
     return (
@@ -185,6 +221,7 @@ export default function RequestAccess() {
               <p style={s.portalCardSub}>Recommend restaurants, bars, venues, and happenings.</p>
             </div>
           </div>
+          {!canSubmit && <p style={s.hint}>Select at least one to continue.</p>}
         </div>
 
         <div style={s.fieldGroup}>
@@ -197,7 +234,7 @@ export default function RequestAccess() {
         </div>
         <div style={s.fieldGroup}>
           <label style={s.label}>Instagram handle</label>
-          <input style={s.input} name="instagram" value={form.instagram} onChange={handleChange} placeholder="@yourhandle" />
+          <input style={s.input} name="instagram" value={form.instagram} onChange={handleChange} placeholder="@yourhandle" required />
         </div>
         <div style={s.fieldGroup}>
           <label style={s.label}>Your city</label>
@@ -232,7 +269,40 @@ export default function RequestAccess() {
           )}
         </div>
 
-        <button type="submit" style={s.button} disabled={loading}>
+        <div style={s.divider} />
+
+        <label style={s.checkboxRow}>
+          <input
+            type="checkbox"
+            style={s.checkbox}
+            checked={agreedToPolicy}
+            onChange={(e) => setAgreedToPolicy(e.target.checked)}
+            required
+          />
+          <span style={s.checkboxLabel}>
+            I acknowledge Get Lored's{' '}
+            <Link to="/privacy" target="_blank" style={s.checkboxLink}>Privacy Policy</Link>{' '}and{' '}
+            <Link to="/terms" target="_blank" style={s.checkboxLink}>Terms of Service</Link>.
+          </span>
+        </label>
+
+        <label style={s.checkboxRow}>
+          <input
+            type="checkbox"
+            style={s.checkbox}
+            checked={marketingOptIn}
+            onChange={(e) => setMarketingOptIn(e.target.checked)}
+          />
+          <span style={s.checkboxLabel}>
+            Send me event drops, city updates, and news from Get Lored. (Optional — unsubscribe anytime.)
+          </span>
+        </label>
+
+        <button
+          type="submit"
+          style={submitDisabled ? { ...s.button, ...s.buttonDisabled } : s.button}
+          disabled={submitDisabled}
+        >
           {loading ? 'Submitting...' : 'Request access'}
         </button>
       </form>
