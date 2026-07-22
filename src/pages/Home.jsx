@@ -1,14 +1,14 @@
 import { Link } from 'react-router-dom'
 
 const cities = [
-  { name: 'Miami', country: 'USA', slug: 'miami', emoji: '🌴' },
-  { name: 'London', country: 'UK', slug: 'london', emoji: '🇬🇧' },
-  { name: 'Ibiza', country: 'Spain', slug: 'ibiza', emoji: '🌊' },
-  { name: 'New York', country: 'USA', slug: 'new-york', emoji: '🗽' },
-  { name: 'Paris', country: 'France', slug: 'paris', emoji: '🗼' },
-  { name: 'Lagos', country: 'Nigeria', slug: 'lagos', emoji: '🌍' },
-  { name: 'Toronto', country: 'Canada', slug: 'toronto', emoji: '🍁' },
-  { name: 'Charlotte', country: 'USA', slug: 'charlotte', emoji: '👑' },
+  { name: 'Washington DC', country: 'USA', slug: 'washington-dc' },
+  { name: 'Charlotte', country: 'USA', slug: 'charlotte' },
+  { name: 'Chicago', country: 'USA', slug: 'chicago' },
+  { name: 'Atlanta', country: 'USA', slug: 'atlanta' },
+  { name: 'Mexico City', country: 'Mexico', slug: 'mexico-city' },
+  { name: 'Panama City', country: 'Panama', slug: 'panama-city' },
+  { name: 'Lisbon', country: 'Portugal', slug: 'lisbon' },
+  { name: 'Amsterdam', country: 'Netherlands', slug: 'amsterdam' },
 ]
 
 const styles = {
@@ -107,11 +107,6 @@ const styles = {
     transition: 'background 0.2s',
     display: 'block',
   },
-  cityEmoji: {
-    fontSize: '28px',
-    marginBottom: '16px',
-    display: 'block',
-  },
   cityName: {
     fontFamily: "'Cormorant Garamond', serif",
     fontSize: '28px',
@@ -187,7 +182,6 @@ export default function Home() {
               to={`/cities/${city.slug}`}
               style={styles.cityCard}
             >
-              <span style={styles.cityEmoji}>{city.emoji}</span>
               <div style={styles.cityName}>{city.name}</div>
               <div style={styles.cityCountry}>{city.country}</div>
             </Link>
