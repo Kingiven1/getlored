@@ -72,6 +72,8 @@ const s = {
   fieldGroup: { display: 'flex', flexDirection: 'column', gap: '6px' },
   label: { fontFamily: "'DM Sans', sans-serif", fontSize: '11px', fontWeight: '500', letterSpacing: '0.08em', textTransform: 'uppercase', color: '#6B6560' },
   input: { width: '100%', padding: '12px 16px', fontFamily: "'DM Sans', sans-serif", fontSize: '14px', fontWeight: '300', color: '#1A1A1A', backgroundColor: '#F2EEE9', border: '1px solid #E8E4DE', borderRadius: '2px', outline: 'none', boxSizing: 'border-box' },
+  inputReview: { width: '100%', padding: '12px 16px', fontFamily: "'DM Sans', sans-serif", fontSize: '14px', fontWeight: '300', color: '#1A1A1A', backgroundColor: '#FDF8F5', border: '1px solid #B07D62', borderRadius: '2px', outline: 'none', boxSizing: 'border-box' },
+  reviewHint: { fontFamily: "'DM Sans', sans-serif", fontSize: '11px', color: '#B07D62', marginTop: '2px' },
   inputDisabled: { width: '100%', padding: '12px 16px', fontFamily: "'DM Sans', sans-serif", fontSize: '14px', fontWeight: '300', color: '#9B9590', backgroundColor: '#EDEAE5', border: '1px solid #E8E4DE', borderRadius: '2px', outline: 'none', boxSizing: 'border-box' },
   select: { width: '100%', padding: '12px 16px', fontFamily: "'DM Sans', sans-serif", fontSize: '14px', fontWeight: '300', color: '#1A1A1A', backgroundColor: '#F2EEE9', border: '1px solid #E8E4DE', borderRadius: '2px', outline: 'none', boxSizing: 'border-box' },
   textarea: { width: '100%', padding: '12px 16px', fontFamily: "'DM Sans', sans-serif", fontSize: '14px', fontWeight: '300', color: '#1A1A1A', backgroundColor: '#F2EEE9', border: '1px solid #E8E4DE', borderRadius: '2px', outline: 'none', boxSizing: 'border-box', resize: 'vertical', minHeight: '100px', lineHeight: '1.6' },
@@ -178,6 +180,11 @@ export default function CuratorPortal() {
 
   const [placeFilterCity, setPlaceFilterCity] = useState('')
   const [placeFilterStyle, setPlaceFilterStyle] = useState('')
+
+  const [placeScreenshot, setPlaceScreenshot] = useState(null)
+  const [placeScreenshotPreview, setPlaceScreenshotPreview] = useState(null)
+  const [placeScanning, setPlaceScanning] = useState(false)
+  const [placeReviewFields, setPlaceReviewFields] = useState([])
 
   const [submitting, setSubmitting] = useState(false)
   const [scanning, setScanning] = useState(false)
@@ -386,6 +393,70 @@ export default function CuratorPortal() {
     return { url: data.publicUrl, failed: false }
   }
 
+  function handlePlaceScreenshotChange(e) {
+    const file = e.target.files[0]
+    processPlaceScreenshotFile(file)
+  }
+
+  async function processPlaceScreenshotFile(file) {
+    if (!file) return
+    try {
+      const resized = await resizeImage(file)
+      setPlaceScreenshot(resized)
+      setPlaceScreenshotPreview(URL.createObjectURL(resized))
+    } catch {
+      setPlaceScreenshot(file)
+      setPlaceScreenshotPreview(URL.createObjectURL(file))
+    }
+  }
+
+  async function handleScanPlace() {
+    if (!placeScreenshot) return
+    setPlaceScanning(true)
+    setError('')
+    setWarning('')
+    setPlaceReviewFields([])
+    try {
+      const reader = new FileReader()
+      reader.onload = async (e) => {
+        const base64 = e.target.result.split(',')[1]
+        const { data, error: fnError } = await supabase.functions.invoke('scan-place', {
+          body: { image_base64: base64, media_type: placeScreenshot.type },
+        })
+
+        if (fnError || data?.error) {
+          setError("Couldn't auto-fill from that screenshot. Please enter details manually.")
+          setPlaceScanning(false)
+          return
+        }
+
+        const matchedCity = matchSupportedCity(data.city)
+        setPlaceForm(prev => ({
+          ...prev,
+          name: data.name || prev.name,
+          address: data.address || prev.address,
+          city: matchedCity ? matchedCity.city : prev.city,
+          country: matchedCity ? matchedCity.country : prev.country,
+          website: data.website || prev.website,
+          description: data.description || prev.description,
+          dining_style: DINING_STYLES.includes(data.dining_style) ? data.dining_style : prev.dining_style,
+        }))
+
+        const flagged = [...(data.fields_needing_review || [])]
+        if (data.city_unmatched || (data.city && !matchedCity)) {
+          flagged.push('city')
+          setWarning(`AI detected "${data.city}" but that's not one of our supported cities yet — please select one manually.`)
+        }
+        setPlaceReviewFields(flagged)
+        setPlaceScanning(false)
+      }
+      reader.readAsDataURL(placeScreenshot)
+    } catch {
+      setError('Scan failed. Fill in manually.')
+      setPlaceScanning(false)
+    }
+  }
+
   function startEditingEvent(evt) {
     setEventForm({
       title: evt.title || '',
@@ -590,6 +661,7 @@ export default function CuratorPortal() {
       } else {
         setSuccess('Place updated.')
         setPlaceForm(emptyPlace)
+        setPlaceScreenshot(null); setPlaceScreenshotPreview(null); setPlaceReviewFields([])
         setEditingPlaceId(null)
         await fetchMyPlaces()
         setPlacesViewMode('mine')
@@ -603,6 +675,7 @@ export default function CuratorPortal() {
       } else {
         setSuccess('Place added to Get Lored.')
         setPlaceForm(emptyPlace)
+        setPlaceScreenshot(null); setPlaceScreenshotPreview(null); setPlaceReviewFields([])
         await fetchMyPlaces()
       }
     }
@@ -993,10 +1066,34 @@ export default function CuratorPortal() {
               {editingPlaceId && (
                 <p style={s.editingBanner}>Editing "{placeForm.name || 'this place'}". Changes will update the existing listing.</p>
               )}
+
+              {!editingPlaceId && (
+                <>
+                  <label style={s.flyerBox}>
+                    {placeScreenshotPreview ? (
+                      <img src={placeScreenshotPreview} alt="Screenshot preview" style={s.flyerPreview} />
+                    ) : (
+                      <>
+                        <p style={s.flyerLabel}>Upload a screenshot of the place (IG post, Google Maps, review site)</p>
+                        <p style={s.flyerHint}>JPG or PNG</p>
+                      </>
+                    )}
+                    <input type="file" accept="image/*" onChange={handlePlaceScreenshotChange} style={{ display: 'none' }} />
+                  </label>
+
+                  {placeScreenshot && (
+                    <button type="button" style={s.scanBtn} onClick={handleScanPlace} disabled={placeScanning}>
+                      {placeScanning ? 'Researching this place...' : 'Scan & research with AI'}
+                    </button>
+                  )}
+                </>
+              )}
+
               <form style={s.form} onSubmit={handlePlaceSubmit}>
                 <div style={s.fieldGroup}>
                   <label style={s.label}>Name</label>
-                  <input style={s.input} name="name" value={placeForm.name} onChange={handlePlaceChange} placeholder="Place name" required />
+                  <input style={placeReviewFields.includes('name') ? s.inputReview : s.input} name="name" value={placeForm.name} onChange={handlePlaceChange} placeholder="Place name" required />
+                  {placeReviewFields.includes('name') && <p style={s.reviewHint}>AI wasn't fully confident here — please double-check</p>}
                 </div>
                 <div style={s.row}>
                   <div style={s.fieldGroup}>
@@ -1011,7 +1108,7 @@ export default function CuratorPortal() {
                   </div>
                   <div style={s.fieldGroup}>
                     <label style={s.label}>Dining style</label>
-                    <select style={s.select} name="dining_style" value={placeForm.dining_style} onChange={handlePlaceChange} required>
+                    <select style={placeReviewFields.includes('dining_style') ? s.inputReview : s.select} name="dining_style" value={placeForm.dining_style} onChange={handlePlaceChange} required>
                       <option value="">Select style</option>
                       {DINING_STYLES.map(style => (
                         <option key={style} value={style}>{style}</option>
@@ -1021,17 +1118,19 @@ export default function CuratorPortal() {
                 </div>
                 <div style={s.fieldGroup}>
                   <label style={s.label}>Address</label>
-                  <input style={s.input} name="address" value={placeForm.address} onChange={handlePlaceChange} placeholder="Full address" />
+                  <input style={placeReviewFields.includes('address') ? s.inputReview : s.input} name="address" value={placeForm.address} onChange={handlePlaceChange} placeholder="Full address" />
+                  {placeReviewFields.includes('address') && <p style={s.reviewHint}>AI wasn't fully confident here — please double-check</p>}
                 </div>
                 <div style={s.row}>
                   <div style={s.fieldGroup}>
                     <label style={s.label}>City</label>
-                    <select style={s.select} value={placeForm.city} onChange={handlePlaceCitySelect} required>
+                    <select style={placeReviewFields.includes('city') ? s.inputReview : s.select} value={placeForm.city} onChange={handlePlaceCitySelect} required>
                       <option value="">Select city</option>
                       {SUPPORTED_CITIES.map(c => (
                         <option key={c.city} value={c.city}>{c.city}</option>
                       ))}
                     </select>
+                    {placeReviewFields.includes('city') && <p style={s.reviewHint}>Please confirm this is correct</p>}
                   </div>
                   <div style={s.fieldGroup}>
                     <label style={s.label}>Country</label>
@@ -1044,11 +1143,12 @@ export default function CuratorPortal() {
                 </div>
                 <div style={s.fieldGroup}>
                   <label style={s.label}>Website</label>
-                  <input style={s.input} name="website" value={placeForm.website} onChange={handlePlaceChange} placeholder="https://..." />
+                  <input style={placeReviewFields.includes('website') ? s.inputReview : s.input} name="website" value={placeForm.website} onChange={handlePlaceChange} placeholder="https://..." />
+                  {placeReviewFields.includes('website') && <p style={s.reviewHint}>AI wasn't fully confident here — please double-check</p>}
                 </div>
                 <div style={s.fieldGroup}>
                   <label style={s.label}>Description</label>
-                  <textarea style={s.textarea} name="description" value={placeForm.description} onChange={handlePlaceChange} placeholder="What makes this spot worth knowing about..." />
+                  <textarea style={placeReviewFields.includes('description') ? s.inputReview : s.textarea} name="description" value={placeForm.description} onChange={handlePlaceChange} placeholder="What makes this spot worth knowing about..." />
                 </div>
                 <div style={s.formButtonRow}>
                   <button type="submit" style={s.button} disabled={submitting}>
