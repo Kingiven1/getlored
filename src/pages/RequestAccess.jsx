@@ -88,6 +88,24 @@ export default function RequestAccess() {
     setResetSent(true)
   }
 
+  // Tags this person as a curator and records their curator city in marketing_consent,
+  // without disturbing an existing marketing opt-in they may have already given elsewhere.
+  // Only touches email_opt_in / opted_in_at if they explicitly checked the box on this form.
+  async function saveCuratorConsent(userId) {
+    const consentPayload = {
+      user_id: userId,
+      email: form.email,
+      consent_version: 'v1',
+      audience_type: 'curator',
+      home_city: form.city,
+    }
+    if (marketingOptIn) {
+      consentPayload.email_opt_in = true
+      consentPayload.opted_in_at = new Date().toISOString()
+    }
+    await supabase.from('marketing_consent').upsert([consentPayload], { onConflict: 'user_id' })
+  }
+
   async function handleSubmit(e) {
     e.preventDefault()
     setError('')
@@ -135,15 +153,7 @@ export default function RequestAccess() {
         return
       }
 
-      if (marketingOptIn) {
-        await supabase.from('marketing_consent').insert([{
-          user_id: existingUser.id,
-          email: form.email,
-          email_opt_in: true,
-          opted_in_at: new Date().toISOString(),
-          consent_version: 'v1',
-        }])
-      }
+      await saveCuratorConsent(existingUser.id)
 
       setSubmitted(true)
       setLoading(false)
@@ -200,13 +210,7 @@ export default function RequestAccess() {
     }
 
     if (data.user?.id) {
-      await supabase.from('marketing_consent').insert([{
-        user_id: data.user.id,
-        email: form.email,
-        email_opt_in: marketingOptIn,
-        opted_in_at: marketingOptIn ? new Date().toISOString() : null,
-        consent_version: 'v1',
-      }])
+      await saveCuratorConsent(data.user.id)
     }
 
     await supabase.auth.signOut()
