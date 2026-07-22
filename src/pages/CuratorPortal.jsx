@@ -149,6 +149,14 @@ function formatCategory(category) {
   return category.replace(/_/g, ' ')
 }
 
+function normalizeUrl(url) {
+  if (!url) return url
+  const trimmed = url.trim()
+  if (!trimmed) return trimmed
+  if (/^https?:\/\//i.test(trimmed)) return trimmed
+  return `https://${trimmed}`
+}
+
 export default function CuratorPortal() {
   const [user, setUser] = useState(null)
   const [curator, setCurator] = useState(undefined)
@@ -621,7 +629,7 @@ export default function CuratorPortal() {
     if (editingEventId) {
       const { error } = await supabase
         .from('events')
-        .update({ ...eventForm, flyer_url: flyerUrl })
+        .update({ ...eventForm, ticket_url: normalizeUrl(eventForm.ticket_url), flyer_url: flyerUrl })
         .eq('id', editingEventId)
 
       if (error) {
@@ -639,6 +647,7 @@ export default function CuratorPortal() {
     } else {
       const { error } = await supabase.from('events').insert([{
         ...eventForm, curator_id: user.id, status: 'published',
+        ticket_url: normalizeUrl(eventForm.ticket_url),
         flyer_url: flyerUrl,
       }])
       if (error) {
@@ -671,7 +680,7 @@ export default function CuratorPortal() {
     if (editingPlaceId) {
       const { error } = await supabase
         .from('places')
-        .update({ ...placeForm })
+        .update({ ...placeForm, website: normalizeUrl(placeForm.website), google_maps_url: normalizeUrl(placeForm.google_maps_url) })
         .eq('id', editingPlaceId)
 
       if (error) {
@@ -687,6 +696,8 @@ export default function CuratorPortal() {
     } else {
       const { error } = await supabase.from('places').insert([{
         ...placeForm, curator_id: user.id,
+        website: normalizeUrl(placeForm.website),
+        google_maps_url: normalizeUrl(placeForm.google_maps_url),
       }])
       if (error) {
         setError('Something went wrong. Try again.')
@@ -713,7 +724,7 @@ export default function CuratorPortal() {
     if (editingHappeningId) {
       const { error } = await supabase
         .from('happenings')
-        .update({ ...happeningForm })
+        .update({ ...happeningForm, link: normalizeUrl(happeningForm.link) })
         .eq('id', editingHappeningId)
 
       if (error) {
@@ -728,6 +739,7 @@ export default function CuratorPortal() {
     } else {
       const { error } = await supabase.from('happenings').insert([{
         ...happeningForm, curator_id: user.id, status: 'published',
+        link: normalizeUrl(happeningForm.link),
       }])
       if (error) {
         setError('Something went wrong. Try again.')
