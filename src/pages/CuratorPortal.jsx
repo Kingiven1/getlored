@@ -2,6 +2,25 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase.js'
 
+const SUPPORTED_CITIES = [
+  { city: 'Washington DC', country: 'USA' },
+  { city: 'Charlotte', country: 'USA' },
+  { city: 'Chicago', country: 'USA' },
+  { city: 'Atlanta', country: 'USA' },
+  { city: 'Mexico City', country: 'Mexico' },
+  { city: 'Panama City', country: 'Panama' },
+  { city: 'Lisbon', country: 'Portugal' },
+  { city: 'Amsterdam', country: 'Netherlands' },
+]
+
+function matchSupportedCity(detected) {
+  if (!detected) return null
+  const cleaned = detected.trim().toLowerCase()
+  return SUPPORTED_CITIES.find(c =>
+    c.city.toLowerCase() === cleaned || cleaned.includes(c.city.toLowerCase())
+  ) || null
+}
+
 const emptyEvent = {
   title: '', venue: '', address: '', city: '', country: '',
   date: '', time: '', genre: '', description: '', ticket_url: '',
@@ -43,6 +62,7 @@ const s = {
   fieldGroup: { display: 'flex', flexDirection: 'column', gap: '6px' },
   label: { fontFamily: "'DM Sans', sans-serif", fontSize: '11px', fontWeight: '500', letterSpacing: '0.08em', textTransform: 'uppercase', color: '#6B6560' },
   input: { width: '100%', padding: '12px 16px', fontFamily: "'DM Sans', sans-serif", fontSize: '14px', fontWeight: '300', color: '#1A1A1A', backgroundColor: '#F2EEE9', border: '1px solid #E8E4DE', borderRadius: '2px', outline: 'none', boxSizing: 'border-box' },
+  inputDisabled: { width: '100%', padding: '12px 16px', fontFamily: "'DM Sans', sans-serif", fontSize: '14px', fontWeight: '300', color: '#9B9590', backgroundColor: '#EDEAE5', border: '1px solid #E8E4DE', borderRadius: '2px', outline: 'none', boxSizing: 'border-box' },
   select: { width: '100%', padding: '12px 16px', fontFamily: "'DM Sans', sans-serif", fontSize: '14px', fontWeight: '300', color: '#1A1A1A', backgroundColor: '#F2EEE9', border: '1px solid #E8E4DE', borderRadius: '2px', outline: 'none', boxSizing: 'border-box' },
   textarea: { width: '100%', padding: '12px 16px', fontFamily: "'DM Sans', sans-serif", fontSize: '14px', fontWeight: '300', color: '#1A1A1A', backgroundColor: '#F2EEE9', border: '1px solid #E8E4DE', borderRadius: '2px', outline: 'none', boxSizing: 'border-box', resize: 'vertical', minHeight: '100px', lineHeight: '1.6' },
   button: { padding: '14px 32px', fontFamily: "'DM Sans', sans-serif", fontSize: '13px', fontWeight: '500', letterSpacing: '0.06em', textTransform: 'uppercase', color: '#FAF8F5', backgroundColor: '#1A1A1A', border: 'none', borderRadius: '2px', cursor: 'pointer', alignSelf: 'flex-start' },
@@ -50,6 +70,7 @@ const s = {
   formButtonRow: { display: 'flex', alignItems: 'center' },
   success: { fontFamily: "'DM Sans', sans-serif", fontSize: '13px', color: '#27AE60', backgroundColor: '#EDFAF3', padding: '12px 16px', borderRadius: '2px', border: '1px solid #B7EAD0', marginBottom: '24px' },
   error: { fontFamily: "'DM Sans', sans-serif", fontSize: '13px', color: '#C0392B', backgroundColor: '#FDF0EE', padding: '12px 16px', borderRadius: '2px', border: '1px solid #F5C6C0', marginBottom: '24px' },
+  warning: { fontFamily: "'DM Sans', sans-serif", fontSize: '13px', color: '#8B6914', backgroundColor: '#FEF9E7', padding: '12px 16px', borderRadius: '2px', border: '1px solid #F9E79F', marginBottom: '24px' },
   divider: { height: '1px', backgroundColor: '#E8E4DE', margin: '40px 0' },
   gate: { textAlign: 'center', padding: '120px 32px' },
   gateHeadline: { fontFamily: "'Cormorant Garamond', serif", fontSize: '36px', fontStyle: 'italic', color: '#1A1A1A', marginBottom: '16px' },
@@ -117,6 +138,7 @@ export default function CuratorPortal() {
   const [scanning, setScanning] = useState(false)
   const [success, setSuccess] = useState('')
   const [error, setError] = useState('')
+  const [warning, setWarning] = useState('')
   const [flyer, setFlyer] = useState(null)
   const [flyerPreview, setFlyerPreview] = useState(null)
   const [dragActive, setDragActive] = useState(false)
@@ -181,13 +203,33 @@ export default function CuratorPortal() {
   function handlePlaceChange(e) { setPlaceForm({ ...placeForm, [e.target.name]: e.target.value }) }
   function handleHappeningChange(e) { setHappeningForm({ ...happeningForm, [e.target.name]: e.target.value }) }
 
+  function handleEventCitySelect(e) {
+    const match = SUPPORTED_CITIES.find(c => c.city === e.target.value)
+    setEventForm({ ...eventForm, city: match ? match.city : '', country: match ? match.country : '' })
+  }
+
+  function handlePlaceCitySelect(e) {
+    const match = SUPPORTED_CITIES.find(c => c.city === e.target.value)
+    setPlaceForm({ ...placeForm, city: match ? match.city : '', country: match ? match.country : '' })
+  }
+
+  function handleHappeningCitySelect(e) {
+    const match = SUPPORTED_CITIES.find(c => c.city === e.target.value)
+    setHappeningForm({ ...happeningForm, city: match ? match.city : '', country: match ? match.country : '' })
+  }
+
   async function processFlyerFile(file) {
-    if (!file || !file.type.startsWith('image/')) return
+    if (!file) return
+    // Only reject if we KNOW it's not an image. Some mobile camera captures
+    // report an empty or unusual MIME type, so we don't block on that alone.
+    if (file.type && !file.type.startsWith('image/') && !file.type.startsWith('application/octet-stream')) return
+
     try {
       const resized = await resizeImage(file)
       setFlyer(resized)
       setFlyerPreview(URL.createObjectURL(resized))
     } catch {
+      // Resize failed (unsupported format on this device) — fall back to the original file
       setFlyer(file)
       setFlyerPreview(URL.createObjectURL(file))
     }
@@ -230,19 +272,25 @@ export default function CuratorPortal() {
         })
         const data = await res.json()
         if (data.title) {
+          const matchedCity = matchSupportedCity(data.city)
           setEventForm(prev => ({
             ...prev,
             title: data.title || prev.title,
             venue: data.venue || prev.venue,
             address: data.address || prev.address,
-            city: data.city || prev.city,
-            country: data.country || prev.country,
+            city: matchedCity ? matchedCity.city : prev.city,
+            country: matchedCity ? matchedCity.country : prev.country,
             date: data.date || prev.date,
             time: data.time || prev.time,
             genre: data.genre || prev.genre,
             description: data.description || prev.description,
             ticket_url: data.ticket_url || prev.ticket_url,
           }))
+          if (data.city && !matchedCity) {
+            setWarning(`AI detected "${data.city}" but that's not one of our supported cities yet — please select one manually.`)
+          } else {
+            setWarning('')
+          }
         }
         setScanning(false)
       }
@@ -254,17 +302,17 @@ export default function CuratorPortal() {
   }
 
   async function uploadFlyer() {
-    if (!flyer) return null
+    if (!flyer) return { url: null, failed: false }
     const fileName = `${Date.now()}-${flyer.name}`
     const { error: uploadError } = await supabase.storage
       .from('flyers')
       .upload(fileName, flyer, { contentType: flyer.type })
     if (uploadError) {
       console.error(uploadError)
-      return null
+      return { url: null, failed: true }
     }
     const { data } = supabase.storage.from('flyers').getPublicUrl(fileName)
-    return data.publicUrl
+    return { url: data.publicUrl, failed: false }
   }
 
   function startEditingEvent(evt) {
@@ -287,6 +335,7 @@ export default function CuratorPortal() {
     setEventsSubTab('add')
     setSuccess('')
     setError('')
+    setWarning('')
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
@@ -298,6 +347,7 @@ export default function CuratorPortal() {
     setFlyerPreview(null)
     setSuccess('')
     setError('')
+    setWarning('')
   }
 
   async function handleDeleteEvent(evt) {
@@ -314,14 +364,21 @@ export default function CuratorPortal() {
 
   async function handleEventSubmit(e) {
     e.preventDefault()
+    if (!eventForm.city) {
+      setError('Please select a city from the list.')
+      return
+    }
     setSubmitting(true)
     setError('')
     setSuccess('')
+    setWarning('')
 
     let flyerUrl = editingFlyerUrl
+    let flyerFailed = false
     if (flyer) {
-      const uploaded = await uploadFlyer()
-      if (uploaded) flyerUrl = uploaded
+      const result = await uploadFlyer()
+      if (result.url) flyerUrl = result.url
+      if (result.failed) flyerFailed = true
     }
 
     if (editingEventId) {
@@ -333,7 +390,7 @@ export default function CuratorPortal() {
       if (error) {
         setError('Something went wrong updating the event. Try again.')
       } else {
-        setSuccess('Event updated.')
+        setSuccess(flyerFailed ? 'Event updated, but the new flyer failed to upload — try re-uploading it.' : 'Event updated.')
         setEventForm(emptyEvent)
         setFlyer(null)
         setFlyerPreview(null)
@@ -350,7 +407,7 @@ export default function CuratorPortal() {
       if (error) {
         setError('Something went wrong. Try again.')
       } else {
-        setSuccess('Event added to Get Lored.')
+        setSuccess(flyerFailed ? 'Event added, but the flyer failed to upload — edit the event to try again.' : 'Event added to Get Lored.')
         setEventForm(emptyEvent)
         setFlyer(null)
         setFlyerPreview(null)
@@ -362,6 +419,10 @@ export default function CuratorPortal() {
 
   async function handlePlaceSubmit(e) {
     e.preventDefault()
+    if (!placeForm.city) {
+      setError('Please select a city from the list.')
+      return
+    }
     setSubmitting(true)
     setError('')
     setSuccess('')
@@ -375,6 +436,10 @@ export default function CuratorPortal() {
 
   async function handleHappeningSubmit(e) {
     e.preventDefault()
+    if (!happeningForm.city) {
+      setError('Please select a city from the list.')
+      return
+    }
     setSubmitting(true)
     setError('')
     setSuccess('')
@@ -448,13 +513,13 @@ export default function CuratorPortal() {
         <div style={s.portalTabs}>
           <button
             style={portalTab === 'events' ? { ...s.portalTab, ...s.portalTabActive } : s.portalTab}
-            onClick={() => { setPortalTab('events'); setSuccess(''); setError('') }}
+            onClick={() => { setPortalTab('events'); setSuccess(''); setError(''); setWarning('') }}
           >
             Events
           </button>
           <button
             style={portalTab === 'places' ? { ...s.portalTab, ...s.portalTabActive } : s.portalTab}
-            onClick={() => { setPortalTab('places'); setSuccess(''); setError('') }}
+            onClick={() => { setPortalTab('places'); setSuccess(''); setError(''); setWarning('') }}
           >
             Places & Happenings
           </button>
@@ -463,19 +528,20 @@ export default function CuratorPortal() {
 
       {success && <p style={s.success}>{success}</p>}
       {error && <p style={s.error}>{error}</p>}
+      {warning && <p style={s.warning}>{warning}</p>}
 
       {portalTab === 'events' && curator.can_events && (
         <>
           <div style={s.subTabs}>
             <button
               style={eventsSubTab === 'add' ? { ...s.subTab, ...s.subTabActive } : s.subTab}
-              onClick={() => { setEventsSubTab('add'); setSuccess(''); setError('') }}
+              onClick={() => { setEventsSubTab('add'); setSuccess(''); setError(''); setWarning('') }}
             >
               {editingEventId ? 'Editing event' : 'Add event'}
             </button>
             <button
               style={eventsSubTab === 'mine' ? { ...s.subTab, ...s.subTabActive } : s.subTab}
-              onClick={() => { setEventsSubTab('mine'); setSuccess(''); setError('') }}
+              onClick={() => { setEventsSubTab('mine'); setSuccess(''); setError(''); setWarning('') }}
             >
               My Events ({myEvents.length})
             </button>
@@ -549,11 +615,16 @@ export default function CuratorPortal() {
                 <div style={s.row}>
                   <div style={s.fieldGroup}>
                     <label style={s.label}>City</label>
-                    <input style={s.input} name="city" value={eventForm.city} onChange={handleEventChange} placeholder="Miami" required />
+                    <select style={s.select} value={eventForm.city} onChange={handleEventCitySelect} required>
+                      <option value="">Select city</option>
+                      {SUPPORTED_CITIES.map(c => (
+                        <option key={c.city} value={c.city}>{c.city}</option>
+                      ))}
+                    </select>
                   </div>
                   <div style={s.fieldGroup}>
                     <label style={s.label}>Country</label>
-                    <input style={s.input} name="country" value={eventForm.country} onChange={handleEventChange} placeholder="USA" required />
+                    <input style={s.inputDisabled} value={eventForm.country} placeholder="Auto-filled" disabled />
                   </div>
                 </div>
                 <div style={s.row}>
@@ -619,13 +690,13 @@ export default function CuratorPortal() {
           <div style={s.subTabs}>
             <button
               style={placesSubTab === 'place' ? { ...s.subTab, ...s.subTabActive } : s.subTab}
-              onClick={() => { setPlacesSubTab('place'); setSuccess(''); setError('') }}
+              onClick={() => { setPlacesSubTab('place'); setSuccess(''); setError(''); setWarning('') }}
             >
               Add a place
             </button>
             <button
               style={placesSubTab === 'happening' ? { ...s.subTab, ...s.subTabActive } : s.subTab}
-              onClick={() => { setPlacesSubTab('happening'); setSuccess(''); setError('') }}
+              onClick={() => { setPlacesSubTab('happening'); setSuccess(''); setError(''); setWarning('') }}
             >
               Add a happening
             </button>
@@ -654,11 +725,16 @@ export default function CuratorPortal() {
               <div style={s.row}>
                 <div style={s.fieldGroup}>
                   <label style={s.label}>City</label>
-                  <input style={s.input} name="city" value={placeForm.city} onChange={handlePlaceChange} placeholder="Charlotte" required />
+                  <select style={s.select} value={placeForm.city} onChange={handlePlaceCitySelect} required>
+                    <option value="">Select city</option>
+                    {SUPPORTED_CITIES.map(c => (
+                      <option key={c.city} value={c.city}>{c.city}</option>
+                    ))}
+                  </select>
                 </div>
                 <div style={s.fieldGroup}>
                   <label style={s.label}>Country</label>
-                  <input style={s.input} name="country" value={placeForm.country} onChange={handlePlaceChange} placeholder="USA" required />
+                  <input style={s.inputDisabled} value={placeForm.country} placeholder="Auto-filled" disabled />
                 </div>
               </div>
               <div style={s.fieldGroup}>
@@ -692,11 +768,16 @@ export default function CuratorPortal() {
               <div style={s.row}>
                 <div style={s.fieldGroup}>
                   <label style={s.label}>City</label>
-                  <input style={s.input} name="city" value={happeningForm.city} onChange={handleHappeningChange} placeholder="Charlotte" required />
+                  <select style={s.select} value={happeningForm.city} onChange={handleHappeningCitySelect} required>
+                    <option value="">Select city</option>
+                    {SUPPORTED_CITIES.map(c => (
+                      <option key={c.city} value={c.city}>{c.city}</option>
+                    ))}
+                  </select>
                 </div>
                 <div style={s.fieldGroup}>
                   <label style={s.label}>Country</label>
-                  <input style={s.input} name="country" value={happeningForm.country} onChange={handleHappeningChange} placeholder="USA" required />
+                  <input style={s.inputDisabled} value={happeningForm.country} placeholder="Auto-filled" disabled />
                 </div>
               </div>
               <div style={s.row}>
