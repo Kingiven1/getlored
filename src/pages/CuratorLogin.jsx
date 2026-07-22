@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase.js'
 
 const s = {
@@ -14,12 +14,11 @@ const s = {
   button: { width: '100%', padding: '14px', fontFamily: "'DM Sans', sans-serif", fontSize: '13px', fontWeight: '500', letterSpacing: '0.06em', textTransform: 'uppercase', color: '#FAF8F5', backgroundColor: '#1A1A1A', border: 'none', borderRadius: '2px', cursor: 'pointer', marginTop: '8px' },
   error: { fontFamily: "'DM Sans', sans-serif", fontSize: '13px', color: '#C0392B', backgroundColor: '#FDF0EE', padding: '12px 16px', borderRadius: '2px', border: '1px solid #F5C6C0', marginBottom: '16px' },
   pending: { fontFamily: "'DM Sans', sans-serif", fontSize: '13px', color: '#B07D62', backgroundColor: '#FDF8F5', padding: '12px 16px', borderRadius: '2px', border: '1px solid #E8D5C4', marginBottom: '16px' },
+  resetSuccess: { fontFamily: "'DM Sans', sans-serif", fontSize: '13px', color: '#27AE60', backgroundColor: '#EDFAF3', padding: '12px 16px', borderRadius: '2px', border: '1px solid #B7EAD0', marginBottom: '16px' },
   divider: { height: '1px', backgroundColor: '#E8E4DE', margin: '32px 0' },
   bottomLink: { fontFamily: "'DM Sans', sans-serif", fontSize: '13px', fontWeight: '300', color: '#6B6560', textAlign: 'center', marginTop: '16px' },
-  inlineLink: { color: '#B07D62', borderBottom: '1px solid #B07D62', paddingBottom: '1px' },
   regularLink: { fontFamily: "'DM Sans', sans-serif", fontSize: '13px', fontWeight: '300', color: '#9B9590', textAlign: 'center', marginTop: '12px' },
   forgotLink: { fontFamily: "'DM Sans', sans-serif", fontSize: '12px', color: '#9B9590', textAlign: 'right', cursor: 'pointer', marginTop: '4px', display: 'block' },
-  resetSuccess: { fontFamily: "'DM Sans', sans-serif", fontSize: '13px', color: '#27AE60', backgroundColor: '#EDFAF3', padding: '12px 16px', borderRadius: '2px', border: '1px solid #B7EAD0', marginBottom: '16px' },
 }
 
 export default function CuratorLogin() {
@@ -29,7 +28,6 @@ export default function CuratorLogin() {
   const [error, setError] = useState('')
   const [notApproved, setNotApproved] = useState(false)
   const [resetSent, setResetSent] = useState(false)
-  const { useNavigate } = require('react-router-dom')
   const navigate = useNavigate()
 
   async function handleSubmit(e) {
@@ -97,7 +95,9 @@ export default function CuratorLogin() {
 
         <p style={s.bottomLink}>
           Not a curator yet?{' '}
-          <Link to="/request-access" style={s.inlineLink}>Request access →</Link>
+          <Link to="/request-access" style={{ color: '#B07D62', borderBottom: '1px solid #B07D62', paddingBottom: '1px' }}>
+            Request access →
+          </Link>
         </p>
         <p style={s.regularLink}>
           Looking for events?{' '}
