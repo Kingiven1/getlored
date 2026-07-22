@@ -77,8 +77,15 @@ const s = {
   gateSub: { fontFamily: "'DM Sans', sans-serif", fontSize: '14px', fontWeight: '300', color: '#6B6560', marginBottom: '32px' },
   gateBtn: { display: 'inline-block', padding: '14px 32px', fontFamily: "'DM Sans', sans-serif", fontSize: '13px', fontWeight: '500', letterSpacing: '0.06em', textTransform: 'uppercase', color: '#FAF8F5', backgroundColor: '#1A1A1A', borderRadius: '2px', marginRight: '16px' },
   gateSecondary: { display: 'inline-block', padding: '14px 32px', fontFamily: "'DM Sans', sans-serif", fontSize: '13px', fontWeight: '400', letterSpacing: '0.06em', textTransform: 'uppercase', color: '#6B6560', border: '1px solid #E8E4DE', borderRadius: '2px', cursor: 'pointer', backgroundColor: 'transparent' },
+  filterBar: { display: 'flex', gap: '12px', marginBottom: '28px', flexWrap: 'wrap', alignItems: 'flex-end' },
+  filterGroup: { display: 'flex', flexDirection: 'column', gap: '6px', minWidth: '160px' },
+  filterLabel: { fontFamily: "'DM Sans', sans-serif", fontSize: '10px', fontWeight: '500', letterSpacing: '0.08em', textTransform: 'uppercase', color: '#9B9590' },
+  filterSelect: { padding: '10px 14px', fontFamily: "'DM Sans', sans-serif", fontSize: '13px', fontWeight: '300', color: '#1A1A1A', backgroundColor: '#F2EEE9', border: '1px solid #E8E4DE', borderRadius: '2px', outline: 'none' },
+  filterClear: { padding: '10px 16px', fontFamily: "'DM Sans', sans-serif", fontSize: '12px', color: '#9B9590', backgroundColor: 'transparent', border: '1px solid #E8E4DE', borderRadius: '2px', cursor: 'pointer' },
+  resultsCount: { fontFamily: "'DM Sans', sans-serif", fontSize: '12px', color: '#9B9590', marginBottom: '16px' },
   myEventsList: { display: 'flex', flexDirection: 'column', gap: '2px' },
   myEventCard: { backgroundColor: '#F2EEE9', padding: '24px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '16px', flexWrap: 'wrap' },
+  myEventCardPast: { opacity: 0.6 },
   myEventInfo: { flex: 1, minWidth: '200px' },
   myEventDate: { fontFamily: "'DM Sans', sans-serif", fontSize: '11px', textTransform: 'uppercase', color: '#B07D62', marginBottom: '6px', letterSpacing: '0.08em' },
   myEventTitle: { fontFamily: "'Cormorant Garamond', serif", fontSize: '22px', fontWeight: '500', color: '#1A1A1A', marginBottom: '4px' },
@@ -118,6 +125,13 @@ function formatDate(dateStr) {
   return new Date(dateStr).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })
 }
 
+function isPastDate(dateStr) {
+  if (!dateStr) return false
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  return new Date(dateStr) < today
+}
+
 export default function CuratorPortal() {
   const [user, setUser] = useState(null)
   const [curator, setCurator] = useState(undefined)
@@ -133,6 +147,10 @@ export default function CuratorPortal() {
   const [myEventsLoading, setMyEventsLoading] = useState(true)
   const [editingEventId, setEditingEventId] = useState(null)
   const [editingFlyerUrl, setEditingFlyerUrl] = useState(null)
+
+  const [sortOrder, setSortOrder] = useState('upcoming')
+  const [filterCity, setFilterCity] = useState('')
+  const [filterGenre, setFilterGenre] = useState('')
 
   const [submitting, setSubmitting] = useState(false)
   const [scanning, setScanning] = useState(false)
@@ -220,8 +238,6 @@ export default function CuratorPortal() {
 
   async function processFlyerFile(file) {
     if (!file) return
-    // Only reject if we KNOW it's not an image. Some mobile camera captures
-    // report an empty or unusual MIME type, so we don't block on that alone.
     if (file.type && !file.type.startsWith('image/') && !file.type.startsWith('application/octet-stream')) return
 
     try {
@@ -229,7 +245,6 @@ export default function CuratorPortal() {
       setFlyer(resized)
       setFlyerPreview(URL.createObjectURL(resized))
     } catch {
-      // Resize failed (unsupported format on this device) — fall back to the original file
       setFlyer(file)
       setFlyerPreview(URL.createObjectURL(file))
     }
@@ -492,6 +507,26 @@ export default function CuratorPortal() {
 
   const hasBoth = curator.can_events && curator.can_places
 
+  const myEventCities = [...new Set(myEvents.map(e => e.city).filter(Boolean))]
+  const myEventGenres = [...new Set(myEvents.map(e => e.genre).filter(Boolean))]
+
+  let visibleEvents = myEvents.filter(e => {
+    if (filterCity && e.city !== filterCity) return false
+    if (filterGenre && e.genre !== filterGenre) return false
+    return true
+  })
+
+  visibleEvents = [...visibleEvents].sort((a, b) => {
+    const dateA = a.date ? new Date(a.date).getTime() : 0
+    const dateB = b.date ? new Date(b.date).getTime() : 0
+    if (sortOrder === 'upcoming') return dateA - dateB
+    if (sortOrder === 'newest') return dateB - dateA
+    if (sortOrder === 'az') return (a.title || '').localeCompare(b.title || '')
+    return 0
+  })
+
+  const hasActiveFilters = filterCity || filterGenre || sortOrder !== 'upcoming'
+
   return (
     <main style={s.page}>
       <div style={s.topRow}>
@@ -665,21 +700,66 @@ export default function CuratorPortal() {
             ) : myEvents.length === 0 ? (
               <p style={s.emptyState}>You haven't added any events yet.</p>
             ) : (
-              <div style={s.myEventsList}>
-                {myEvents.map(evt => (
-                  <div key={evt.id} style={s.myEventCard}>
-                    <div style={s.myEventInfo}>
-                      <p style={s.myEventDate}>{formatDate(evt.date)}</p>
-                      <h3 style={s.myEventTitle}>{evt.title}</h3>
-                      <p style={s.myEventVenue}>{evt.venue}{evt.city ? ` · ${evt.city}` : ''}</p>
-                    </div>
-                    <div style={s.myEventActions}>
-                      <button style={s.editBtn} onClick={() => startEditingEvent(evt)}>Edit</button>
-                      <button style={s.deleteBtn} onClick={() => handleDeleteEvent(evt)}>Delete</button>
-                    </div>
+              <>
+                <div style={s.filterBar}>
+                  <div style={s.filterGroup}>
+                    <label style={s.filterLabel}>Sort by</label>
+                    <select style={s.filterSelect} value={sortOrder} onChange={(e) => setSortOrder(e.target.value)}>
+                      <option value="upcoming">Upcoming first</option>
+                      <option value="newest">Furthest out first</option>
+                      <option value="az">A–Z</option>
+                    </select>
                   </div>
-                ))}
-              </div>
+                  <div style={s.filterGroup}>
+                    <label style={s.filterLabel}>City</label>
+                    <select style={s.filterSelect} value={filterCity} onChange={(e) => setFilterCity(e.target.value)}>
+                      <option value="">All cities</option>
+                      {myEventCities.map(c => (
+                        <option key={c} value={c}>{c}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div style={s.filterGroup}>
+                    <label style={s.filterLabel}>Genre</label>
+                    <select style={s.filterSelect} value={filterGenre} onChange={(e) => setFilterGenre(e.target.value)}>
+                      <option value="">All genres</option>
+                      {myEventGenres.map(g => (
+                        <option key={g} value={g}>{g}</option>
+                      ))}
+                    </select>
+                  </div>
+                  {hasActiveFilters && (
+                    <button
+                      style={s.filterClear}
+                      onClick={() => { setFilterCity(''); setFilterGenre(''); setSortOrder('upcoming') }}
+                    >
+                      Clear filters
+                    </button>
+                  )}
+                </div>
+
+                <p style={s.resultsCount}>{visibleEvents.length} event{visibleEvents.length !== 1 ? 's' : ''}</p>
+
+                {visibleEvents.length === 0 ? (
+                  <p style={s.emptyState}>No events match those filters.</p>
+                ) : (
+                  <div style={s.myEventsList}>
+                    {visibleEvents.map(evt => (
+                      <div key={evt.id} style={isPastDate(evt.date) ? { ...s.myEventCard, ...s.myEventCardPast } : s.myEventCard}>
+                        <div style={s.myEventInfo}>
+                          <p style={s.myEventDate}>{formatDate(evt.date)}{isPastDate(evt.date) ? ' · Past' : ''}</p>
+                          <h3 style={s.myEventTitle}>{evt.title}</h3>
+                          <p style={s.myEventVenue}>{evt.venue}{evt.city ? ` · ${evt.city}` : ''}{evt.genre ? ` · ${evt.genre}` : ''}</p>
+                        </div>
+                        <div style={s.myEventActions}>
+                          <button style={s.editBtn} onClick={() => startEditingEvent(evt)}>Edit</button>
+                          <button style={s.deleteBtn} onClick={() => handleDeleteEvent(evt)}>Delete</button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </>
             )
           )}
         </>
