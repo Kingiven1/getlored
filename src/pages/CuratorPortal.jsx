@@ -30,7 +30,8 @@ const s = {
   subTabs: { display: 'flex', gap: '8px', marginBottom: '32px' },
   subTab: { padding: '8px 20px', fontFamily: "'DM Sans', sans-serif", fontSize: '12px', fontWeight: '500', letterSpacing: '0.06em', textTransform: 'uppercase', color: '#6B6560', backgroundColor: '#F2EEE9', border: '1px solid #E8E4DE', borderRadius: '2px', cursor: 'pointer' },
   subTabActive: { color: '#FAF8F5', backgroundColor: '#1A1A1A', border: '1px solid #1A1A1A' },
-  flyerBox: { border: '2px dashed #E8E4DE', borderRadius: '4px', padding: '40px', textAlign: 'center', marginBottom: '32px', cursor: 'pointer', backgroundColor: '#F9F7F4' },
+  sectionTitle: { fontFamily: "'Cormorant Garamond', serif", fontSize: '28px', fontWeight: '500', color: '#1A1A1A', marginBottom: '20px', lineHeight: '1.3' },
+  flyerBox: { border: '2px dashed #E8E4DE', borderRadius: '4px', padding: '40px', textAlign: 'center', marginTop: '8px', marginBottom: '32px', cursor: 'pointer', backgroundColor: '#F9F7F4' },
   flyerBoxActive: { border: '2px dashed #B07D62', backgroundColor: '#FDF8F5' },
   flyerLabel: { fontFamily: "'DM Sans', sans-serif", fontSize: '13px', color: '#9B9590', marginBottom: '8px' },
   flyerHint: { fontFamily: "'DM Sans', sans-serif", fontSize: '11px', color: '#B8B4AF', letterSpacing: '0.06em', textTransform: 'uppercase' },
@@ -47,7 +48,6 @@ const s = {
   success: { fontFamily: "'DM Sans', sans-serif", fontSize: '13px', color: '#27AE60', backgroundColor: '#EDFAF3', padding: '12px 16px', borderRadius: '2px', border: '1px solid #B7EAD0', marginBottom: '24px' },
   error: { fontFamily: "'DM Sans', sans-serif", fontSize: '13px', color: '#C0392B', backgroundColor: '#FDF0EE', padding: '12px 16px', borderRadius: '2px', border: '1px solid #F5C6C0', marginBottom: '24px' },
   divider: { height: '1px', backgroundColor: '#E8E4DE', margin: '40px 0' },
-  sectionTitle: { fontFamily: "'Cormorant Garamond', serif", fontSize: '28px', fontWeight: '500', color: '#1A1A1A', marginBottom: '24px' },
   gate: { textAlign: 'center', padding: '120px 32px' },
   gateHeadline: { fontFamily: "'Cormorant Garamond', serif", fontSize: '36px', fontStyle: 'italic', color: '#1A1A1A', marginBottom: '16px' },
   gateSub: { fontFamily: "'DM Sans', sans-serif", fontSize: '14px', fontWeight: '300', color: '#6B6560', marginBottom: '32px' },
@@ -55,7 +55,6 @@ const s = {
   gateSecondary: { display: 'inline-block', padding: '14px 32px', fontFamily: "'DM Sans', sans-serif", fontSize: '13px', fontWeight: '400', letterSpacing: '0.06em', textTransform: 'uppercase', color: '#6B6560', border: '1px solid #E8E4DE', borderRadius: '2px', cursor: 'pointer', backgroundColor: 'transparent' },
 }
 
-// Resize an image file client-side so uploaded flyers stay small but legible
 function resizeImage(file, maxWidth = 1000) {
   return new Promise((resolve, reject) => {
     const img = new Image()
