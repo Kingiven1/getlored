@@ -61,7 +61,7 @@ export default function Navbar() {
               <Link to="/curator" style={isActive('/curator') ? {...s.link, ...s.active} : s.link}>Portal</Link>
             )}
             {isAdmin && (
-              <Link to="/admin" style={isActive('/admin') ? {...s.link, ...s.active} : s.link}>Admin</Link>
+              <Link to="/control-panel" style={isActive('/control-panel') ? {...s.link, ...s.active} : s.link}>Admin</Link>
             )}
             <span style={s.userName}>{userName}</span>
             <button style={s.userBtn} onClick={handleSignOut}>Sign out</button>
