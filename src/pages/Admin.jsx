@@ -19,11 +19,11 @@ const styles = {
   approveButton: { padding: '6px 16px', fontFamily: "'DM Sans', sans-serif", fontSize: '11px', fontWeight: '500', letterSpacing: '0.06em', textTransform: 'uppercase', color: '#FAF8F5', backgroundColor: '#1A1A1A', border: 'none', borderRadius: '2px', cursor: 'pointer', marginRight: '8px' },
   rejectButton: { padding: '6px 16px', fontFamily: "'DM Sans', sans-serif", fontSize: '11px', fontWeight: '500', letterSpacing: '0.06em', textTransform: 'uppercase', color: '#C0392B', backgroundColor: 'transparent', border: '1px solid #C0392B', borderRadius: '2px', cursor: 'pointer' },
   toggleButton: { padding: '6px 16px', fontFamily: "'DM Sans', sans-serif", fontSize: '11px', fontWeight: '500', letterSpacing: '0.06em', textTransform: 'uppercase', color: '#C0392B', backgroundColor: 'transparent', border: '1px solid #C0392B', borderRadius: '2px', cursor: 'pointer', marginRight: '6px', marginBottom: '4px' },
+  adminButton: { padding: '6px 16px', fontFamily: "'DM Sans', sans-serif", fontSize: '11px', fontWeight: '500', letterSpacing: '0.06em', textTransform: 'uppercase', color: '#6B3FA0', backgroundColor: 'transparent', border: '1px solid #6B3FA0', borderRadius: '2px', cursor: 'pointer', marginRight: '6px', marginBottom: '4px' },
   badge: { display: 'inline-block', padding: '3px 10px', borderRadius: '2px', fontFamily: "'DM Sans', sans-serif", fontSize: '10px', fontWeight: '500', letterSpacing: '0.08em', textTransform: 'uppercase', marginRight: '4px', marginBottom: '4px' },
   badgeOn: { backgroundColor: '#EDFAF3', color: '#27AE60' },
   badgeOff: { backgroundColor: '#FEF9E7', color: '#8B6914' },
-  badgeEvents: { backgroundColor: '#F0EAFB', color: '#6B3FA0' },
-  badgePlaces: { backgroundColor: '#EAF2FB', color: '#2C6FA0' },
+  badgeAdmin: { backgroundColor: '#F0EAFB', color: '#6B3FA0' },
   emptyState: { fontFamily: "'Cormorant Garamond', serif", fontSize: '22px', fontStyle: 'italic', color: '#9B9590', textAlign: 'center', padding: '48px 0' },
   deniedWrap: { textAlign: 'center', padding: '120px 32px' },
   deniedHeadline: { fontFamily: "'Cormorant Garamond', serif", fontSize: '36px', fontStyle: 'italic', color: '#1A1A1A', marginBottom: '16px' },
@@ -70,8 +70,8 @@ function PendingRequestsTable({ rows, busyId, onApprove, onReject }) {
             <td style={styles.td}>{row.city}</td>
             <td style={styles.tdMuted}>{row.instagram}</td>
             <td style={styles.td}>
-              {row.wants_events ? <span style={{ ...styles.badge, ...styles.badgeEvents }}>Events</span> : null}
-              {row.wants_places ? <span style={{ ...styles.badge, ...styles.badgePlaces }}>Places</span> : null}
+              {row.wants_events ? <span style={{ ...styles.badge, ...styles.badgeOn }}>Events</span> : null}
+              {row.wants_places ? <span style={{ ...styles.badge, ...styles.badgeOn }}>Places</span> : null}
             </td>
             <td style={styles.td}><div style={styles.whyCell}>{row.why}</div></td>
             <td style={styles.tdMuted}>{formatWhen(row.created_at)}</td>
@@ -100,7 +100,7 @@ function PendingRequestsTable({ rows, busyId, onApprove, onReject }) {
   )
 }
 
-function CuratorsTable({ rows, busyId, onTogglePortal }) {
+function CuratorsTable({ rows, busyId, onTogglePortal, onToggleAdmin, currentUserId }) {
   if (rows.length === 0) {
     return <p style={styles.emptyState}>No curators yet.</p>
   }
@@ -119,12 +119,15 @@ function CuratorsTable({ rows, busyId, onTogglePortal }) {
       <tbody>
         {rows.map((row) => {
           const isAdminRow = row.role === 'admin'
+          const isSelf = row.user_id === currentUserId
           return (
             <tr key={row.id}>
               <td style={styles.td}>{row.name}</td>
               <td style={styles.td}>{row.city}</td>
               <td style={styles.tdMuted}>{row.instagram}</td>
-              <td style={styles.td}>{row.role}</td>
+              <td style={styles.td}>
+                {isAdminRow ? <span style={{ ...styles.badge, ...styles.badgeAdmin }}>Admin</span> : 'Curator'}
+              </td>
               <td style={styles.td}>
                 <span style={{ ...styles.badge, ...(row.can_events ? styles.badgeOn : styles.badgeOff) }}>
                   Events: {row.can_events ? 'On' : 'Off'}
@@ -134,27 +137,33 @@ function CuratorsTable({ rows, busyId, onTogglePortal }) {
                 </span>
               </td>
               <td style={styles.td}>
-                {isAdminRow ? (
-                  <span style={styles.tdMuted}>Admin</span>
+                <button
+                  type="button"
+                  style={styles.toggleButton}
+                  disabled={busyId === row.id}
+                  onClick={() => onTogglePortal(row, 'can_events')}
+                >
+                  {row.can_events ? 'Revoke Events' : 'Grant Events'}
+                </button>
+                <button
+                  type="button"
+                  style={styles.toggleButton}
+                  disabled={busyId === row.id}
+                  onClick={() => onTogglePortal(row, 'can_places')}
+                >
+                  {row.can_places ? 'Revoke Places' : 'Grant Places'}
+                </button>
+                {isSelf ? (
+                  <span style={styles.tdMuted}>Can't change own admin status</span>
                 ) : (
-                  <>
-                    <button
-                      type="button"
-                      style={styles.toggleButton}
-                      disabled={busyId === row.id}
-                      onClick={() => onTogglePortal(row, 'can_events')}
-                    >
-                      {row.can_events ? 'Revoke Events' : 'Grant Events'}
-                    </button>
-                    <button
-                      type="button"
-                      style={styles.toggleButton}
-                      disabled={busyId === row.id}
-                      onClick={() => onTogglePortal(row, 'can_places')}
-                    >
-                      {row.can_places ? 'Revoke Places' : 'Grant Places'}
-                    </button>
-                  </>
+                  <button
+                    type="button"
+                    style={styles.adminButton}
+                    disabled={busyId === row.id}
+                    onClick={() => onToggleAdmin(row)}
+                  >
+                    {isAdminRow ? 'Remove Admin' : 'Make Admin'}
+                  </button>
                 )}
               </td>
             </tr>
@@ -174,6 +183,7 @@ export default function Admin() {
   const [curators, setCurators] = useState([])
   const [banner, setBanner] = useState(null)
   const [busyId, setBusyId] = useState(null)
+  const [currentUserId, setCurrentUserId] = useState(null)
 
   useEffect(() => {
     let cancelled = false
@@ -207,6 +217,7 @@ export default function Admin() {
 
       if (cancelled) return
 
+      setCurrentUserId(sessionUser.id)
       setPendingRequests(requestsResult.data || [])
       setCurators(curatorsResult.data || [])
       setPhase('ready')
@@ -309,6 +320,25 @@ export default function Admin() {
     setBusyId(null)
   }
 
+  async function handleToggleAdmin(curator) {
+    const makingAdmin = curator.role !== 'admin'
+    setBusyId(curator.id)
+    const result = await supabase
+      .from('curators')
+      .update({ role: makingAdmin ? 'admin' : 'curator' })
+      .eq('id', curator.id)
+
+    if (result.error) {
+      showBanner('error', `Could not update ${curator.name}'s role.`)
+      setBusyId(null)
+      return
+    }
+
+    showBanner('success', makingAdmin ? `${curator.name} is now an admin.` : `${curator.name} is no longer an admin.`)
+    await refreshCurators()
+    setBusyId(null)
+  }
+
   async function handleSignOut() {
     await supabase.auth.signOut()
     navigate('/')
@@ -375,6 +405,8 @@ export default function Admin() {
           rows={curators}
           busyId={busyId}
           onTogglePortal={handleTogglePortal}
+          onToggleAdmin={handleToggleAdmin}
+          currentUserId={currentUserId}
         />
       )}
     </main>
