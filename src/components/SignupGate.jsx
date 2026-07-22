@@ -1,161 +1,38 @@
-import { useParams, Link } from 'react-router-dom'
-import { useEffect, useState } from 'react'
-import { supabase } from '../lib/supabase.js'
-import SignupGate from '../components/SignupGate.jsx'
+import { Link } from 'react-router-dom'
 
-const cityMeta = {
-  'washington-dc': { name: 'Washington DC', country: 'USA' },
-  'charlotte': { name: 'Charlotte', country: 'USA' },
-  'chicago': { name: 'Chicago', country: 'USA' },
-  'atlanta': { name: 'Atlanta', country: 'USA' },
-  'mexico-city': { name: 'Mexico City', country: 'Mexico' },
-  'panama-city': { name: 'Panama City', country: 'Panama' },
-  'lisbon': { name: 'Lisbon', country: 'Portugal' },
-  'amsterdam': { name: 'Amsterdam', country: 'Netherlands' },
+const s = {
+  overlay: { position: 'fixed', inset: 0, backgroundColor: 'rgba(26,26,26,0.55)', backdropFilter: 'blur(2px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '24px' },
+  modal: { backgroundColor: '#FAF8F5', borderRadius: '4px', maxWidth: '440px', width: '100%', padding: '48px 40px', position: 'relative', textAlign: 'center' },
+  closeBtn: { position: 'absolute', top: '16px', right: '20px', background: 'none', border: 'none', fontSize: '18px', color: '#9B9590', cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" },
+  eyebrow: { fontFamily: "'DM Sans', sans-serif", fontSize: '11px', fontWeight: '500', letterSpacing: '0.12em', textTransform: 'uppercase', color: '#B07D62', marginBottom: '16px' },
+  headline: { fontFamily: "'Cormorant Garamond', serif", fontSize: '32px', fontWeight: '500', color: '#1A1A1A', marginBottom: '16px', lineHeight: '1.2' },
+  sub: { fontFamily: "'DM Sans', sans-serif", fontSize: '14px', fontWeight: '300', color: '#6B6560', lineHeight: '1.7', marginBottom: '32px' },
+  perks: { textAlign: 'left', marginBottom: '32px', display: 'flex', flexDirection: 'column', gap: '10px' },
+  perk: { fontFamily: "'DM Sans', sans-serif", fontSize: '13px', fontWeight: '300', color: '#4A4540', display: 'flex', gap: '10px', alignItems: 'flex-start' },
+  perkDot: { color: '#B07D62', fontWeight: '600' },
+  signupBtn: { display: 'block', width: '100%', padding: '14px', fontFamily: "'DM Sans', sans-serif", fontSize: '13px', fontWeight: '500', letterSpacing: '0.06em', textTransform: 'uppercase', color: '#FAF8F5', backgroundColor: '#1A1A1A', border: 'none', borderRadius: '2px', cursor: 'pointer', marginBottom: '12px', textDecoration: 'none', boxSizing: 'border-box' },
+  dismiss: { fontFamily: "'DM Sans', sans-serif", fontSize: '12px', color: '#9B9590', cursor: 'pointer', background: 'none', border: 'none' },
 }
 
-const BAR_CATEGORIES = ['bar', 'music_venue']
-
-export default function CityPage() {
-  const { city } = useParams()
-  const meta = cityMeta[city] || { name: city, country: '' }
-  const [activeTab, setActiveTab] = useState('events')
-  const [events, setEvents] = useState([])
-  const [places, setPlaces] = useState([])
-  const [happenings, setHappenings] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [session, setSession] = useState(undefined)
-  const [showGate, setShowGate] = useState(false)
-
-  useEffect(() => { fetchData() }, [city])
-
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => setSession(session))
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_e, session) => setSession(session))
-    return () => subscription.unsubscribe()
-  }, [])
-
-  async function fetchData() {
-    setLoading(true)
-    const [eventsRes, placesRes, happeningsRes] = await Promise.all([
-      supabase.from('events').select('*').ilike('city', meta.name).eq('status', 'published').order('date', { ascending: true }),
-      supabase.from('places').select('*').ilike('city', meta.name).order('created_at', { ascending: false }),
-      supabase.from('happenings').select('*').ilike('city', meta.name).eq('status', 'published').order('date', { ascending: true }),
-    ])
-    setEvents(eventsRes.data || [])
-    setPlaces(placesRes.data || [])
-    setHappenings(happeningsRes.data || [])
-    setLoading(false)
-  }
-
-  function formatDate(dateStr) {
-    if (!dateStr) return ''
-    return new Date(dateStr).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })
-  }
-
-  const filtered = places.filter(p => {
-    if (activeTab === 'restaurants') return p.category === 'restaurant' || p.category === 'coffee'
-    if (activeTab === 'bars') return BAR_CATEGORIES.includes(p.category)
-    return !['restaurant', 'coffee', ...BAR_CATEGORIES].includes(p.category)
-  })
-
-  const s = {
-    page: { maxWidth: '1100px', margin: '0 auto', padding: '64px 32px' },
-    back: { fontFamily: "'DM Sans', sans-serif", fontSize: '12px', textTransform: 'uppercase', color: '#9B9590', marginBottom: '40px', display: 'inline-block', letterSpacing: '0.08em' },
-    headline: { fontFamily: "'Cormorant Garamond', serif", fontSize: 'clamp(48px, 7vw, 80px)', fontWeight: '500', color: '#1A1A1A', marginBottom: '8px' },
-    country: { fontFamily: "'DM Sans', sans-serif", fontSize: '12px', textTransform: 'uppercase', color: '#B07D62', letterSpacing: '0.1em' },
-    tabs: { display: 'flex', borderBottom: '1px solid #E8E4DE', marginBottom: '48px', marginTop: '48px', flexWrap: 'wrap' },
-    tab: { fontFamily: "'DM Sans', sans-serif", fontSize: '12px', textTransform: 'uppercase', color: '#9B9590', padding: '12px 24px', cursor: 'pointer', border: 'none', background: 'none', borderBottom: '2px solid transparent', marginBottom: '-1px', letterSpacing: '0.08em' },
-    tabActive: { color: '#1A1A1A', borderBottom: '2px solid #1A1A1A' },
-    grid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '2px' },
-    card: { backgroundColor: '#F2EEE9', padding: '28px 24px', display: 'block', cursor: 'pointer' },
-    cardDate: { fontFamily: "'DM Sans', sans-serif", fontSize: '11px', textTransform: 'uppercase', color: '#B07D62', marginBottom: '10px', letterSpacing: '0.1em' },
-    cardTitle: { fontFamily: "'Cormorant Garamond', serif", fontSize: '26px', fontWeight: '500', color: '#1A1A1A', marginBottom: '6px' },
-    cardSub: { fontFamily: "'DM Sans', sans-serif", fontSize: '13px', fontWeight: '300', color: '#6B6560', marginBottom: '16px' },
-    tagRow: { display: 'flex', gap: '8px', flexWrap: 'wrap' },
-    tag: { display: 'inline-block', fontFamily: "'DM Sans', sans-serif", fontSize: '10px', textTransform: 'uppercase', color: '#9B9590', border: '1px solid #D8D4CE', padding: '4px 10px', borderRadius: '2px', letterSpacing: '0.1em', cursor: 'pointer' },
-    empty: { fontFamily: "'Cormorant Garamond', serif", fontSize: '24px', fontStyle: 'italic', color: '#9B9590', textAlign: 'center', padding: '80px 0' },
-    loading: { fontFamily: "'DM Sans', sans-serif", fontSize: '13px', color: '#9B9590', textAlign: 'center', padding: '80px 0' },
-  }
-
-  const isLoggedIn = !!session
-
+export default function SignupGate({ onClose }) {
   return (
-    <main style={s.page}>
-      {showGate && <SignupGate onClose={() => setShowGate(false)} />}
-      <Link to="/cities" style={s.back}>All cities</Link>
-      <h1 style={s.headline}>{meta.name}</h1>
-      <p style={s.country}>{meta.country}</p>
-      <div style={s.tabs}>
-        {['events', 'happenings', 'restaurants', 'bars', 'attractions'].map(tab => (
-          <button key={tab} style={activeTab === tab ? { ...s.tab, ...s.tabActive } : s.tab} onClick={() => setActiveTab(tab)}>
-            {tab === 'bars' ? 'Bars & Venues' : tab}
-          </button>
-        ))}
+    <div style={s.overlay} onClick={onClose}>
+      <div style={s.modal} onClick={(e) => e.stopPropagation()}>
+        <button type="button" style={s.closeBtn} onClick={onClose}>✕</button>
+        <p style={s.eyebrow}>Members only</p>
+        <h2 style={s.headline}>Get lored to unlock this.</h2>
+        <p style={s.sub}>
+          Get Lored is curated by DJs, promoters, and cultural insiders who actually know their cities.
+          Create a free account to see full event details, restaurant links, and everything our curators recommend.
+        </p>
+        <div style={s.perks}>
+          <div style={s.perk}><span style={s.perkDot}>—</span> Full event details, times, and tickets</div>
+          <div style={s.perk}><span style={s.perkDot}>—</span> Direct links to curated restaurants & bars</div>
+          <div style={s.perk}><span style={s.perkDot}>—</span> The scene, before everyone else finds out</div>
+        </div>
+        <Link to="/login" style={s.signupBtn}>Create free account</Link>
+        <button type="button" style={s.dismiss} onClick={onClose}>Maybe later</button>
       </div>
-      {loading ? <p style={s.loading}>Loading the lore...</p>
-        : activeTab === 'events' ? (
-          events.length === 0 ? <p style={s.empty}>No events yet.</p> : (
-            <div style={s.grid}>
-              {events.map(e => (
-                isLoggedIn ? (
-                  <Link key={e.id} to={`/events/${e.id}`} style={s.card}>
-                    <p style={s.cardDate}>{formatDate(e.date)}</p>
-                    <h2 style={s.cardTitle}>{e.title}</h2>
-                    <p style={s.cardSub}>{e.venue}</p>
-                    {e.genre && <span style={s.tag}>{e.genre}</span>}
-                  </Link>
-                ) : (
-                  <div key={e.id} style={s.card} onClick={() => setShowGate(true)}>
-                    <p style={s.cardDate}>{formatDate(e.date)}</p>
-                    <h2 style={s.cardTitle}>{e.title}</h2>
-                    <p style={s.cardSub}>{e.venue}</p>
-                    {e.genre && <span style={s.tag}>{e.genre}</span>}
-                  </div>
-                )
-              ))}
-            </div>
-          )
-        ) : activeTab === 'happenings' ? (
-          happenings.length === 0 ? <p style={s.empty}>Nothing happening yet.</p> : (
-            <div style={s.grid}>
-              {happenings.map(h => (
-                <div key={h.id} style={s.card}>
-                  <p style={s.cardDate}>{formatDate(h.date)}{h.time ? ` · ${h.time}` : ''}</p>
-                  <h2 style={s.cardTitle}>{h.title}</h2>
-                  <p style={s.cardSub}>{h.location}</p>
-                  {h.link && (
-                    isLoggedIn ? (
-                      <a href={h.link} target="_blank" rel="noopener noreferrer" style={s.tag}>More info</a>
-                    ) : (
-                      <span style={s.tag} onClick={() => setShowGate(true)}>More info</span>
-                    )
-                  )}
-                </div>
-              ))}
-            </div>
-          )
-        ) : filtered.length === 0 ? <p style={s.empty}>Nothing here yet.</p> : (
-          <div style={s.grid}>
-            {filtered.map(p => (
-              <div key={p.id} style={s.card}>
-                <p style={s.cardDate}>{p.category}</p>
-                <h2 style={s.cardTitle}>{p.name}</h2>
-                <p style={s.cardSub}>{p.address}</p>
-                <div style={s.tagRow}>
-                  {p.website && (
-                    isLoggedIn ? (
-                      <a href={p.website} target="_blank" rel="noopener noreferrer" style={s.tag}>Website</a>
-                    ) : (
-                      <span style={s.tag} onClick={() => setShowGate(true)}>Website</span>
-                    )
-                  )}
-                  {p.google_maps_url && <a href={p.google_maps_url} target="_blank" rel="noopener noreferrer" style={s.tag}>View on Maps</a>}
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-    </main>
+    </div>
   )
 }
