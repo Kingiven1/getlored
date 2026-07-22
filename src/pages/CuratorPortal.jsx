@@ -30,8 +30,9 @@ const s = {
   subTabs: { display: 'flex', gap: '8px', marginBottom: '32px' },
   subTab: { padding: '8px 20px', fontFamily: "'DM Sans', sans-serif", fontSize: '12px', fontWeight: '500', letterSpacing: '0.06em', textTransform: 'uppercase', color: '#6B6560', backgroundColor: '#F2EEE9', border: '1px solid #E8E4DE', borderRadius: '2px', cursor: 'pointer' },
   subTabActive: { color: '#FAF8F5', backgroundColor: '#1A1A1A', border: '1px solid #1A1A1A' },
-  sectionTitle: { fontFamily: "'Cormorant Garamond', serif", fontSize: '28px', fontWeight: '500', color: '#1A1A1A', marginBottom: '20px', lineHeight: '1.3' },
-  flyerBox: { border: '2px dashed #E8E4DE', borderRadius: '4px', padding: '40px', textAlign: 'center', marginTop: '8px', marginBottom: '32px', cursor: 'pointer', backgroundColor: '#F9F7F4' },
+  sectionTitle: { fontFamily: "'Cormorant Garamond', serif", fontSize: '28px', fontWeight: '500', color: '#1A1A1A', marginBottom: '24px', marginTop: '0', lineHeight: '1.4', display: 'block', position: 'relative' },
+  spacer: { height: '4px', width: '100%' },
+  flyerBox: { display: 'block', boxSizing: 'border-box', width: '100%', border: '2px dashed #E8E4DE', borderRadius: '4px', padding: '40px', textAlign: 'center', marginTop: '0', marginBottom: '32px', cursor: 'pointer', backgroundColor: '#F9F7F4', position: 'relative' },
   flyerBoxActive: { border: '2px dashed #B07D62', backgroundColor: '#FDF8F5' },
   flyerLabel: { fontFamily: "'DM Sans', sans-serif", fontSize: '13px', color: '#9B9590', marginBottom: '8px' },
   flyerHint: { fontFamily: "'DM Sans', sans-serif", fontSize: '11px', color: '#B8B4AF', letterSpacing: '0.06em', textTransform: 'uppercase' },
@@ -354,6 +355,7 @@ export default function CuratorPortal() {
       {portalTab === 'events' && curator.can_events && (
         <>
           <h2 style={s.sectionTitle}>Upload flyer</h2>
+          <div style={s.spacer} />
           <label
             style={dragActive ? { ...s.flyerBox, ...s.flyerBoxActive } : s.flyerBox}
             onDragOver={handleDragOver}
