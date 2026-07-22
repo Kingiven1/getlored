@@ -31,8 +31,14 @@ const s = {
   cardSub: { fontFamily: "'DM Sans', sans-serif", fontSize: '13px', fontWeight: '300', color: '#6B6560', marginBottom: '16px' },
   tagRow: { display: 'flex', gap: '8px', flexWrap: 'wrap' },
   tag: { display: 'inline-block', fontFamily: "'DM Sans', sans-serif", fontSize: '10px', textTransform: 'uppercase', color: '#9B9590', border: '1px solid #D8D4CE', padding: '4px 10px', borderRadius: '2px', letterSpacing: '0.1em' },
+  styleTag: { display: 'inline-block', fontFamily: "'DM Sans', sans-serif", fontSize: '10px', textTransform: 'uppercase', color: '#B07D62', border: '1px solid #E8D5C4', backgroundColor: '#FDF8F5', padding: '4px 10px', borderRadius: '2px', letterSpacing: '0.1em' },
   empty: { fontFamily: "'Cormorant Garamond', serif", fontSize: '24px', fontStyle: 'italic', color: '#9B9590', textAlign: 'center', padding: '80px 0' },
   loading: { fontFamily: "'DM Sans', sans-serif", fontSize: '13px', color: '#9B9590', textAlign: 'center', padding: '80px 0' },
+}
+
+function formatCategory(category) {
+  if (!category) return ''
+  return category.replace(/_/g, ' ')
 }
 
 function EventCard({ event, locked, onLockedClick }) {
@@ -69,12 +75,15 @@ function EventCard({ event, locked, onLockedClick }) {
 }
 
 function PlaceCard({ place, locked, onLockedClick }) {
+  const topLabel = place.dining_style || formatCategory(place.category)
+
   return (
     <div style={s.card}>
-      <p style={s.cardDate}>{place.category}</p>
+      <p style={s.cardDate}>{topLabel}</p>
       <h2 style={s.cardTitle}>{place.name}</h2>
       <p style={s.cardSub}>{place.address}</p>
       <div style={s.tagRow}>
+        {place.dining_style && <span style={s.styleTag}>{place.dining_style}</span>}
         {place.website && (
           locked ? (
             <button type="button" onClick={onLockedClick} style={{ ...s.tag, border: '1px solid #D8D4CE', background: 'none', font: 'inherit' }}>
