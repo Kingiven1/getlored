@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase.js'
 
@@ -11,6 +11,7 @@ const s = {
   fieldGroup: { display: 'flex', flexDirection: 'column', gap: '6px' },
   label: { fontFamily: "'DM Sans', sans-serif", fontSize: '11px', fontWeight: '500', letterSpacing: '0.08em', textTransform: 'uppercase', color: '#6B6560' },
   input: { width: '100%', padding: '12px 16px', fontFamily: "'DM Sans', sans-serif", fontSize: '14px', fontWeight: '300', color: '#1A1A1A', backgroundColor: '#F2EEE9', border: '1px solid #E8E4DE', borderRadius: '2px', outline: 'none', boxSizing: 'border-box' },
+  inputDisabled: { width: '100%', padding: '12px 16px', fontFamily: "'DM Sans', sans-serif", fontSize: '14px', fontWeight: '300', color: '#9B9590', backgroundColor: '#EDEAE5', border: '1px solid #E8E4DE', borderRadius: '2px', outline: 'none', boxSizing: 'border-box' },
   inputError: { border: '1px solid #C0392B' },
   textarea: { width: '100%', padding: '12px 16px', fontFamily: "'DM Sans', sans-serif", fontSize: '14px', fontWeight: '300', color: '#1A1A1A', backgroundColor: '#F2EEE9', border: '1px solid #E8E4DE', borderRadius: '2px', outline: 'none', boxSizing: 'border-box', resize: 'vertical', minHeight: '120px', lineHeight: '1.6' },
   button: { width: '100%', padding: '14px', fontFamily: "'DM Sans', sans-serif", fontSize: '13px', fontWeight: '500', letterSpacing: '0.06em', textTransform: 'uppercase', color: '#FAF8F5', backgroundColor: '#1A1A1A', border: 'none', borderRadius: '2px', cursor: 'pointer', marginTop: '8px' },
@@ -19,6 +20,7 @@ const s = {
   dividerLabel: { fontFamily: "'DM Sans', sans-serif", fontSize: '11px', fontWeight: '500', letterSpacing: '0.1em', textTransform: 'uppercase', color: '#9B9590', marginBottom: '24px', marginTop: '8px' },
   error: { fontFamily: "'DM Sans', sans-serif", fontSize: '13px', color: '#C0392B', backgroundColor: '#FDF0EE', padding: '12px 16px', borderRadius: '2px', border: '1px solid #F5C6C0' },
   warning: { fontFamily: "'DM Sans', sans-serif", fontSize: '13px', color: '#8B6914', backgroundColor: '#FEF9E7', padding: '16px', borderRadius: '2px', border: '1px solid #F9E79F', lineHeight: '1.6' },
+  info: { fontFamily: "'DM Sans', sans-serif", fontSize: '13px', color: '#2C6FA0', backgroundColor: '#EAF2FB', padding: '16px', borderRadius: '2px', border: '1px solid #C7DEF2', lineHeight: '1.6', marginBottom: '8px' },
   hint: { fontFamily: "'DM Sans', sans-serif", fontSize: '11px', color: '#9B9590', marginTop: '4px' },
   inlineLink: { color: '#B07D62', borderBottom: '1px solid #B07D62', paddingBottom: '1px', fontWeight: '500' },
   success: { textAlign: 'center', padding: '48px 0' },
@@ -37,6 +39,9 @@ const s = {
 }
 
 export default function RequestAccess() {
+  const [checkingSession, setCheckingSession] = useState(true)
+  const [existingUser, setExistingUser] = useState(null)
+
   const [form, setForm] = useState({
     name: '', email: '', instagram: '', city: '', why: '',
     password: '', confirmPassword: '',
@@ -50,6 +55,25 @@ export default function RequestAccess() {
   const [error, setError] = useState('')
   const [accountExists, setAccountExists] = useState(false)
   const [resetSent, setResetSent] = useState(false)
+
+  useEffect(() => {
+    async function checkSession() {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (session?.user) {
+        setExistingUser(session.user)
+        const meta = session.user.user_metadata || {}
+        setForm(prev => ({
+          ...prev,
+          name: meta.name || '',
+          city: meta.city || '',
+          instagram: meta.instagram || '',
+          email: session.user.email || '',
+        }))
+      }
+      setCheckingSession(false)
+    }
+    checkSession()
+  }, [])
 
   function handleChange(e) {
     setForm({ ...form, [e.target.name]: e.target.value })
@@ -85,20 +109,58 @@ export default function RequestAccess() {
       setError('Please tell us why you\'re the right fit.')
       return
     }
-    if (form.password.length < 8) {
-      setError('Password must be at least 8 characters.')
-      return
-    }
-    if (form.password !== form.confirmPassword) {
-      setError('Passwords do not match.')
-      return
-    }
     if (!agreedToPolicy) {
       setError('Please acknowledge the Privacy Policy to continue.')
       return
     }
 
     setLoading(true)
+
+    // Already-signed-in member: just attach the request to their existing account.
+    if (existingUser) {
+      const { error: requestError } = await supabase.from('curator_requests').insert([{
+        name: form.name,
+        email: form.email,
+        instagram: form.instagram,
+        city: form.city,
+        why: form.why,
+        user_id: existingUser.id,
+        wants_events: wantsEvents,
+        wants_places: wantsPlaces,
+      }])
+
+      if (requestError) {
+        setError('Something went wrong saving your request. Try again.')
+        setLoading(false)
+        return
+      }
+
+      if (marketingOptIn) {
+        await supabase.from('marketing_consent').insert([{
+          user_id: existingUser.id,
+          email: form.email,
+          email_opt_in: true,
+          opted_in_at: new Date().toISOString(),
+          consent_version: 'v1',
+        }])
+      }
+
+      setSubmitted(true)
+      setLoading(false)
+      return
+    }
+
+    // New visitor: create the account first, same as before.
+    if (form.password.length < 8) {
+      setError('Password must be at least 8 characters.')
+      setLoading(false)
+      return
+    }
+    if (form.password !== form.confirmPassword) {
+      setError('Passwords do not match.')
+      setLoading(false)
+      return
+    }
 
     const { data, error: signUpError } = await supabase.auth.signUp({
       email: form.email,
@@ -155,6 +217,8 @@ export default function RequestAccess() {
   const canSubmit = wantsEvents || wantsPlaces
   const submitDisabled = loading || !agreedToPolicy || !canSubmit
 
+  if (checkingSession) return null
+
   if (submitted) {
     return (
       <main style={s.page}>
@@ -163,10 +227,12 @@ export default function RequestAccess() {
           <p style={s.successSub}>
             We review every request personally.<br />
             If you're the right fit, you'll hear from us soon.<br /><br />
-            Once approved, sign in at the curator portal with your email and password.
+            {existingUser
+              ? "You'll see your curator portal unlock automatically once approved — no need to sign in again."
+              : 'Once approved, sign in at the curator portal with your email and password.'}
           </p>
           <br />
-          <Link to="/curator-login" style={s.inlineLink}>Go to curator sign in →</Link>
+          {!existingUser && <Link to="/curator-login" style={s.inlineLink}>Go to curator sign in →</Link>}
         </div>
       </main>
     )
@@ -180,6 +246,13 @@ export default function RequestAccess() {
         Get Lored is invite-only on the curator side. We handpick DJs, event promoters,
         and cultural insiders who know their cities better than anyone. If that's you — apply below.
       </p>
+
+      {existingUser && (
+        <p style={s.info}>
+          You're signed in as {existingUser.email}. We've filled in what we already know —
+          just finish the rest below.
+        </p>
+      )}
 
       {error && <p style={s.error}>{error}</p>}
 
@@ -230,7 +303,11 @@ export default function RequestAccess() {
         </div>
         <div style={s.fieldGroup}>
           <label style={s.label}>Email</label>
-          <input style={s.input} name="email" type="email" value={form.email} onChange={handleChange} placeholder="you@example.com" required />
+          {existingUser ? (
+            <input style={s.inputDisabled} value={form.email} disabled />
+          ) : (
+            <input style={s.input} name="email" type="email" value={form.email} onChange={handleChange} placeholder="you@example.com" required />
+          )}
         </div>
         <div style={s.fieldGroup}>
           <label style={s.label}>Instagram handle</label>
@@ -245,29 +322,33 @@ export default function RequestAccess() {
           <textarea style={s.textarea} name="why" value={form.why} onChange={handleChange} placeholder="Tell us about your scene, your audience, and what you'd bring to Get Lored..." required />
         </div>
 
-        <div style={s.divider} />
-        <p style={s.dividerLabel}>Set up your login</p>
+        {!existingUser && (
+          <>
+            <div style={s.divider} />
+            <p style={s.dividerLabel}>Set up your login</p>
 
-        <div style={s.fieldGroup}>
-          <label style={s.label}>Password</label>
-          <input style={s.input} name="password" type="password" value={form.password} onChange={handleChange} placeholder="••••••••" required />
-          <p style={s.hint}>Minimum 8 characters</p>
-        </div>
-        <div style={s.fieldGroup}>
-          <label style={s.label}>Confirm password</label>
-          <input
-            style={{ ...s.input, ...(form.confirmPassword && form.password !== form.confirmPassword ? s.inputError : {}) }}
-            name="confirmPassword"
-            type="password"
-            value={form.confirmPassword}
-            onChange={handleChange}
-            placeholder="••••••••"
-            required
-          />
-          {form.confirmPassword && form.password !== form.confirmPassword && (
-            <p style={{ ...s.hint, color: '#C0392B' }}>Passwords do not match</p>
-          )}
-        </div>
+            <div style={s.fieldGroup}>
+              <label style={s.label}>Password</label>
+              <input style={s.input} name="password" type="password" value={form.password} onChange={handleChange} placeholder="••••••••" required />
+              <p style={s.hint}>Minimum 8 characters</p>
+            </div>
+            <div style={s.fieldGroup}>
+              <label style={s.label}>Confirm password</label>
+              <input
+                style={{ ...s.input, ...(form.confirmPassword && form.password !== form.confirmPassword ? s.inputError : {}) }}
+                name="confirmPassword"
+                type="password"
+                value={form.confirmPassword}
+                onChange={handleChange}
+                placeholder="••••••••"
+                required
+              />
+              {form.confirmPassword && form.password !== form.confirmPassword && (
+                <p style={{ ...s.hint, color: '#C0392B' }}>Passwords do not match</p>
+              )}
+            </div>
+          </>
+        )}
 
         <div style={s.divider} />
 
@@ -286,17 +367,33 @@ export default function RequestAccess() {
           </span>
         </label>
 
-        <label style={s.checkboxRow}>
-          <input
-            type="checkbox"
-            style={s.checkbox}
-            checked={marketingOptIn}
-            onChange={(e) => setMarketingOptIn(e.target.checked)}
-          />
-          <span style={s.checkboxLabel}>
-            Send me event drops, city updates, and news from Get Lored. (Optional — unsubscribe anytime.)
-          </span>
-        </label>
+        {!existingUser && (
+          <label style={s.checkboxRow}>
+            <input
+              type="checkbox"
+              style={s.checkbox}
+              checked={marketingOptIn}
+              onChange={(e) => setMarketingOptIn(e.target.checked)}
+            />
+            <span style={s.checkboxLabel}>
+              Send me event drops, city updates, and news from Get Lored. (Optional — unsubscribe anytime.)
+            </span>
+          </label>
+        )}
+
+        {existingUser && (
+          <label style={s.checkboxRow}>
+            <input
+              type="checkbox"
+              style={s.checkbox}
+              checked={marketingOptIn}
+              onChange={(e) => setMarketingOptIn(e.target.checked)}
+            />
+            <span style={s.checkboxLabel}>
+              Also sign me up for event drops, city updates, and news. (Optional — unsubscribe anytime.)
+            </span>
+          </label>
+        )}
 
         <button
           type="submit"
@@ -307,12 +404,14 @@ export default function RequestAccess() {
         </button>
       </form>
 
-      <p style={s.loginLink}>
-        Already approved?{' '}
-        <Link to="/curator-login" style={{ color: '#B07D62', borderBottom: '1px solid #B07D62', paddingBottom: '1px' }}>
-          Sign in to your portal →
-        </Link>
-      </p>
+      {!existingUser && (
+        <p style={s.loginLink}>
+          Already approved?{' '}
+          <Link to="/curator-login" style={{ color: '#B07D62', borderBottom: '1px solid #B07D62', paddingBottom: '1px' }}>
+            Sign in to your portal →
+          </Link>
+        </p>
+      )}
     </main>
   )
 }
