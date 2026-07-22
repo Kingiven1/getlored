@@ -8,6 +8,7 @@ import Login from './pages/Login.jsx'
 import CuratorLogin from './pages/CuratorLogin.jsx'
 import RequestAccess from './pages/RequestAccess.jsx'
 import CuratorPortal from './pages/CuratorPortal.jsx'
+import Admin from './pages/Admin.jsx'
 
 const globalCSS = `
   * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -31,6 +32,7 @@ export default function App() {
           <Route path="/curator-login" element={<CuratorLogin />} />
           <Route path="/request-access" element={<RequestAccess />} />
           <Route path="/curator" element={<CuratorPortal />} />
+          <Route path="/control-panel" element={<Admin />} />
         </Routes>
       </div>
     </BrowserRouter>
