@@ -54,8 +54,11 @@ If any field is not visible on the flyer, return an empty string for that field.
     const data = await response.json()
     const text = data.content[0].text
 
+    // Strip markdown code fences if Claude wraps the JSON in them
+    const cleaned = text.trim().replace(/^```(?:json)?\s*/i, '').replace(/```\s*$/, '')
+
     try {
-      const parsed = JSON.parse(text)
+      const parsed = JSON.parse(cleaned)
       res.status(200).json(parsed)
     } catch {
       res.status(200).json({ raw: text })
