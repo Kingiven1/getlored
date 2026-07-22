@@ -41,14 +41,14 @@ export default function CuratorLogin() {
 
     const { data: curator } = await supabase
       .from('curators')
-      .select('approved')
+      .select('can_events, can_places')
       .eq('user_id', data.user.id)
       .single()
 
     if (!curator) {
       setError('No curator account found. Request access first.')
       await supabase.auth.signOut()
-    } else if (!curator.approved) {
+    } else if (!curator.can_events && !curator.can_places) {
       setNotApproved(true)
       await supabase.auth.signOut()
     } else {

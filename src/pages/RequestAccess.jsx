@@ -24,6 +24,11 @@ const s = {
   successHeadline: { fontFamily: "'Cormorant Garamond', serif", fontSize: '36px', fontStyle: 'italic', color: '#1A1A1A', marginBottom: '16px', lineHeight: '1.3' },
   successSub: { fontFamily: "'DM Sans', sans-serif", fontSize: '14px', fontWeight: '300', color: '#6B6560', lineHeight: '1.7' },
   loginLink: { fontFamily: "'DM Sans', sans-serif", fontSize: '13px', fontWeight: '300', color: '#9B9590', textAlign: 'center', marginTop: '24px' },
+  portalChoice: { display: 'flex', gap: '12px' },
+  portalCard: { flex: 1, padding: '20px', border: '1px solid #E8E4DE', borderRadius: '2px', cursor: 'pointer', backgroundColor: '#F2EEE9', transition: 'border-color 0.15s' },
+  portalCardActive: { border: '1px solid #1A1A1A', backgroundColor: '#FAF8F5' },
+  portalCardTitle: { fontFamily: "'Cormorant Garamond', serif", fontSize: '20px', fontWeight: '500', color: '#1A1A1A', marginBottom: '4px' },
+  portalCardSub: { fontFamily: "'DM Sans', sans-serif", fontSize: '12px', fontWeight: '300', color: '#6B6560', lineHeight: '1.5' },
 }
 
 export default function RequestAccess() {
@@ -31,6 +36,8 @@ export default function RequestAccess() {
     name: '', email: '', instagram: '', city: '', why: '',
     password: '', confirmPassword: '',
   })
+  const [wantsEvents, setWantsEvents] = useState(false)
+  const [wantsPlaces, setWantsPlaces] = useState(false)
   const [loading, setLoading] = useState(false)
   const [submitted, setSubmitted] = useState(false)
   const [error, setError] = useState('')
@@ -55,6 +62,10 @@ export default function RequestAccess() {
     setError('')
     setAccountExists(false)
 
+    if (!wantsEvents && !wantsPlaces) {
+      setError('Select at least one portal to apply for.')
+      return
+    }
     if (form.password.length < 8) {
       setError('Password must be at least 8 characters.')
       return
@@ -93,6 +104,8 @@ export default function RequestAccess() {
       city: form.city,
       why: form.why,
       user_id: data.user?.id,
+      wants_events: wantsEvents,
+      wants_places: wantsPlaces,
     }])
 
     if (requestError) {
@@ -154,6 +167,26 @@ export default function RequestAccess() {
       )}
 
       <form style={s.form} onSubmit={handleSubmit}>
+        <div style={s.fieldGroup}>
+          <label style={s.label}>What are you applying for?</label>
+          <div style={s.portalChoice}>
+            <div
+              style={wantsEvents ? { ...s.portalCard, ...s.portalCardActive } : s.portalCard}
+              onClick={() => setWantsEvents(!wantsEvents)}
+            >
+              <p style={s.portalCardTitle}>{wantsEvents ? '✓ ' : ''}Event Curator</p>
+              <p style={s.portalCardSub}>Upload parties, shows, and ticketed events.</p>
+            </div>
+            <div
+              style={wantsPlaces ? { ...s.portalCard, ...s.portalCardActive } : s.portalCard}
+              onClick={() => setWantsPlaces(!wantsPlaces)}
+            >
+              <p style={s.portalCardTitle}>{wantsPlaces ? '✓ ' : ''}Cultural Influencer</p>
+              <p style={s.portalCardSub}>Recommend restaurants, bars, venues, and happenings.</p>
+            </div>
+          </div>
+        </div>
+
         <div style={s.fieldGroup}>
           <label style={s.label}>Full name</label>
           <input style={s.input} name="name" value={form.name} onChange={handleChange} placeholder="DJ King Iven" required />
