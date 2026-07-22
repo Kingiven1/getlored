@@ -1,6 +1,7 @@
-import { useParams, Link } from 'react-router-dom'
+import { useParams, Link, useNavigate } from 'react-router-dom'
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase.js'
+import SignupGate from '../components/SignupGate.jsx'
 
 const s = {
   page: { maxWidth: '800px', margin: '0 auto', padding: '64px 32px' },
@@ -20,14 +21,23 @@ const s = {
   mapsBtn: { display: 'inline-block', fontFamily: "'DM Sans', sans-serif", fontSize: '13px', fontWeight: '400', letterSpacing: '0.06em', textTransform: 'uppercase', color: '#6B6560', borderBottom: '1px solid #6B6560', paddingBottom: '2px' },
   loading: { fontFamily: "'DM Sans', sans-serif", fontSize: '13px', color: '#9B9590', textAlign: 'center', padding: '80px 0' },
   notFound: { fontFamily: "'Cormorant Garamond', serif", fontSize: '28px', fontStyle: 'italic', color: '#9B9590', textAlign: 'center', padding: '80px 0' },
+  blurred: { filter: 'blur(6px)', pointerEvents: 'none', userSelect: 'none' },
 }
 
 export default function EventDetail() {
   const { id } = useParams()
   const [event, setEvent] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [session, setSession] = useState(undefined)
+  const navigate = useNavigate()
 
   useEffect(() => { fetchEvent() }, [id])
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => setSession(session))
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_e, session) => setSession(session))
+    return () => subscription.unsubscribe()
+  }, [])
 
   async function fetchEvent() {
     const { data } = await supabase.from('events').select('*').eq('id', id).single()
@@ -40,62 +50,70 @@ export default function EventDetail() {
     return new Date(dateStr).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })
   }
 
-  if (loading) return <p style={s.loading}>Loading the lore...</p>
+  if (loading || session === undefined) return <p style={s.loading}>Loading the lore...</p>
   if (!event) return <p style={s.notFound}>Event not found.</p>
 
   const mapsUrl = 'https://maps.google.com/?q=' + encodeURIComponent(event.address || '')
+  const isLoggedIn = !!session
+
+  function handleGateClose() {
+    navigate(`/cities/${(event.city || '').toLowerCase().replace(' ', '-')}`)
+  }
 
   return (
     <main style={s.page}>
+      {!isLoggedIn && <SignupGate onClose={handleGateClose} />}
       <Link to={'/cities/' + (event.city || '').toLowerCase().replace(' ', '-')} style={s.back}>
         Back to {event.city}
       </Link>
-      {event.flyer_url && (
-        <div style={s.flyerWrap}>
-          <img src={event.flyer_url} alt={event.title} style={s.flyer} />
+      <div style={!isLoggedIn ? s.blurred : {}}>
+        {event.flyer_url && (
+          <div style={s.flyerWrap}>
+            <img src={event.flyer_url} alt={event.title} style={s.flyer} />
+          </div>
+        )}
+        <p style={s.eyebrow}>{event.genre || 'Event'}</p>
+        <h1 style={s.headline}>{event.title}</h1>
+        <p style={s.venue}>{event.venue}</p>
+        <div style={s.divider} />
+        <div style={s.metaGrid}>
+          <div style={s.metaItem}>
+            <span style={s.metaLabel}>Date</span>
+            <span style={s.metaValue}>{formatDate(event.date)}</span>
+          </div>
+          {event.time && (
+            <div style={s.metaItem}>
+              <span style={s.metaLabel}>Time</span>
+              <span style={s.metaValue}>{event.time}</span>
+            </div>
+          )}
+          {event.city && (
+            <div style={s.metaItem}>
+              <span style={s.metaLabel}>City</span>
+              <span style={s.metaValue}>{event.city}, {event.country}</span>
+            </div>
+          )}
+          {event.address && (
+            <div style={s.metaItem}>
+              <span style={s.metaLabel}>Address</span>
+              <span style={s.metaValue}>{event.address}</span>
+            </div>
+          )}
         </div>
-      )}
-      <p style={s.eyebrow}>{event.genre || 'Event'}</p>
-      <h1 style={s.headline}>{event.title}</h1>
-      <p style={s.venue}>{event.venue}</p>
-      <div style={s.divider} />
-      <div style={s.metaGrid}>
-        <div style={s.metaItem}>
-          <span style={s.metaLabel}>Date</span>
-          <span style={s.metaValue}>{formatDate(event.date)}</span>
+        {event.description && <p style={s.description}>{event.description}</p>}
+        <div style={s.divider} />
+        <div>
+          {event.ticket_url && (
+            <a href={event.ticket_url} target="_blank" rel="noopener noreferrer" style={s.ticketBtn}>
+              Get tickets
+            </a>
+          )}
+          {event.address && (
+            <a href={mapsUrl} target="_blank" rel="noopener noreferrer" style={s.mapsBtn}>
+              View on maps
+            </a>
+          )}
         </div>
-        {event.time && (
-          <div style={s.metaItem}>
-            <span style={s.metaLabel}>Time</span>
-            <span style={s.metaValue}>{event.time}</span>
-          </div>
-        )}
-        {event.city && (
-          <div style={s.metaItem}>
-            <span style={s.metaLabel}>City</span>
-            <span style={s.metaValue}>{event.city}, {event.country}</span>
-          </div>
-        )}
-        {event.address && (
-          <div style={s.metaItem}>
-            <span style={s.metaLabel}>Address</span>
-            <span style={s.metaValue}>{event.address}</span>
-          </div>
-        )}
-      </div>
-      {event.description && <p style={s.description}>{event.description}</p>}
-      <div style={s.divider} />
-      <div>
-        {event.ticket_url && (
-          <a href={event.ticket_url} target="_blank" rel="noopener noreferrer" style={s.ticketBtn}>
-            Get tickets
-          </a>
-        )}
-        {event.address && (
-          <a href={mapsUrl} target="_blank" rel="noopener noreferrer" style={s.mapsBtn}>
-            View on maps
-          </a>
-        )}
       </div>
     </main>
   )
