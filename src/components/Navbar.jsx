@@ -6,7 +6,7 @@ export default function Navbar() {
   const location = useLocation()
   const navigate = useNavigate()
   const [user, setUser] = useState(null)
-  const [isCurator, setIsCurator] = useState(false)
+  const [curatorData, setCuratorData] = useState(null)
   const isActive = (p) => location.pathname === p
 
   useEffect(() => {
@@ -17,20 +17,20 @@ export default function Navbar() {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_e, session) => {
       setUser(session?.user ?? null)
       if (session?.user) checkCurator(session.user.id)
-      else setIsCurator(false)
+      else setCuratorData(null)
     })
     return () => subscription.unsubscribe()
   }, [])
 
   async function checkCurator(userId) {
-    const { data } = await supabase.from('curators').select('approved').eq('user_id', userId).single()
-    setIsCurator(data?.approved === true)
+    const { data } = await supabase.from('curators').select('approved, role').eq('user_id', userId).single()
+    setCuratorData(data || null)
   }
 
   async function handleSignOut() {
     await supabase.auth.signOut()
     setUser(null)
-    setIsCurator(false)
+    setCuratorData(null)
     navigate('/')
   }
 
@@ -47,6 +47,8 @@ export default function Navbar() {
   }
 
   const userName = user?.user_metadata?.name || user?.email?.split('@')[0] || 'Account'
+  const isApprovedCurator = curatorData?.approved === true
+  const isAdmin = curatorData?.role === 'admin'
 
   return (
     <nav style={s.nav}>
@@ -55,8 +57,11 @@ export default function Navbar() {
         <Link to="/cities" style={isActive('/cities') ? {...s.link, ...s.active} : s.link}>Cities</Link>
         {user ? (
           <>
-            {isCurator && (
+            {isApprovedCurator && (
               <Link to="/curator" style={isActive('/curator') ? {...s.link, ...s.active} : s.link}>Portal</Link>
+            )}
+            {isAdmin && (
+              <Link to="/admin" style={isActive('/admin') ? {...s.link, ...s.active} : s.link}>Admin</Link>
             )}
             <span style={s.userName}>{userName}</span>
             <button style={s.userBtn} onClick={handleSignOut}>Sign out</button>
