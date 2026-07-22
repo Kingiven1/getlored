@@ -3,19 +3,19 @@ import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase.js'
 
 const cityMeta = {
-  'miami': { name: 'Miami', country: 'USA', emoji: '🌴' },
-  'new-york': { name: 'New York', country: 'USA', emoji: '🗽' },
-  'charlotte': { name: 'Charlotte', country: 'USA', emoji: '👑' },
-  'toronto': { name: 'Toronto', country: 'Canada', emoji: '🍁' },
-  'london': { name: 'London', country: 'UK', emoji: '🇬🇧' },
-  'paris': { name: 'Paris', country: 'France', emoji: '🗼' },
-  'ibiza': { name: 'Ibiza', country: 'Spain', emoji: '🌊' },
-  'lagos': { name: 'Lagos', country: 'Nigeria', emoji: '🌍' },
+  'washington-dc': { name: 'Washington DC', country: 'USA' },
+  'charlotte': { name: 'Charlotte', country: 'USA' },
+  'chicago': { name: 'Chicago', country: 'USA' },
+  'atlanta': { name: 'Atlanta', country: 'USA' },
+  'mexico-city': { name: 'Mexico City', country: 'Mexico' },
+  'panama-city': { name: 'Panama City', country: 'Panama' },
+  'lisbon': { name: 'Lisbon', country: 'Portugal' },
+  'amsterdam': { name: 'Amsterdam', country: 'Netherlands' },
 }
 
 export default function CityPage() {
   const { city } = useParams()
-  const meta = cityMeta[city] || { name: city, country: '', emoji: '📍' }
+  const meta = cityMeta[city] || { name: city, country: '' }
   const [activeTab, setActiveTab] = useState('events')
   const [events, setEvents] = useState([])
   const [places, setPlaces] = useState([])
@@ -43,7 +43,6 @@ export default function CityPage() {
   const s = {
     page: { maxWidth: '1100px', margin: '0 auto', padding: '64px 32px' },
     back: { fontFamily: "'DM Sans', sans-serif", fontSize: '12px', textTransform: 'uppercase', color: '#9B9590', marginBottom: '40px', display: 'inline-block', letterSpacing: '0.08em' },
-    emoji: { fontSize: '48px', marginBottom: '16px', display: 'block' },
     headline: { fontFamily: "'Cormorant Garamond', serif", fontSize: 'clamp(48px, 7vw, 80px)', fontWeight: '500', color: '#1A1A1A', marginBottom: '8px' },
     country: { fontFamily: "'DM Sans', sans-serif", fontSize: '12px', textTransform: 'uppercase', color: '#B07D62', letterSpacing: '0.1em' },
     tabs: { display: 'flex', borderBottom: '1px solid #E8E4DE', marginBottom: '48px', marginTop: '48px' },
@@ -62,7 +61,6 @@ export default function CityPage() {
   return (
     <main style={s.page}>
       <Link to="/cities" style={s.back}>All cities</Link>
-      <span style={s.emoji}>{meta.emoji}</span>
       <h1 style={s.headline}>{meta.name}</h1>
       <p style={s.country}>{meta.country}</p>
       <div style={s.tabs}>
