@@ -13,6 +13,8 @@ const cityMeta = {
   'amsterdam': { name: 'Amsterdam', country: 'Netherlands' },
 }
 
+const BAR_CATEGORIES = ['bar', 'music_venue']
+
 export default function CityPage() {
   const { city } = useParams()
   const meta = cityMeta[city] || { name: city, country: '' }
@@ -38,7 +40,11 @@ export default function CityPage() {
     return new Date(dateStr).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })
   }
 
-  const filtered = places.filter(p => activeTab === 'restaurants' ? p.category === 'restaurant' : p.category !== 'restaurant')
+  const filtered = places.filter(p => {
+    if (activeTab === 'restaurants') return p.category === 'restaurant'
+    if (activeTab === 'bars') return BAR_CATEGORIES.includes(p.category)
+    return p.category !== 'restaurant' && !BAR_CATEGORIES.includes(p.category)
+  })
 
   const s = {
     page: { maxWidth: '1100px', margin: '0 auto', padding: '64px 32px' },
@@ -64,8 +70,10 @@ export default function CityPage() {
       <h1 style={s.headline}>{meta.name}</h1>
       <p style={s.country}>{meta.country}</p>
       <div style={s.tabs}>
-        {['events', 'restaurants', 'attractions'].map(tab => (
-          <button key={tab} style={activeTab === tab ? { ...s.tab, ...s.tabActive } : s.tab} onClick={() => setActiveTab(tab)}>{tab}</button>
+        {['events', 'restaurants', 'bars', 'attractions'].map(tab => (
+          <button key={tab} style={activeTab === tab ? { ...s.tab, ...s.tabActive } : s.tab} onClick={() => setActiveTab(tab)}>
+            {tab === 'bars' ? 'Bars & Venues' : tab}
+          </button>
         ))}
       </div>
       {loading ? <p style={s.loading}>Loading the lore...</p>
