@@ -46,6 +46,8 @@ const s = {
   select: { width: '100%', padding: '12px 16px', fontFamily: "'DM Sans', sans-serif", fontSize: '14px', fontWeight: '300', color: '#1A1A1A', backgroundColor: '#F2EEE9', border: '1px solid #E8E4DE', borderRadius: '2px', outline: 'none', boxSizing: 'border-box' },
   textarea: { width: '100%', padding: '12px 16px', fontFamily: "'DM Sans', sans-serif", fontSize: '14px', fontWeight: '300', color: '#1A1A1A', backgroundColor: '#F2EEE9', border: '1px solid #E8E4DE', borderRadius: '2px', outline: 'none', boxSizing: 'border-box', resize: 'vertical', minHeight: '100px', lineHeight: '1.6' },
   button: { padding: '14px 32px', fontFamily: "'DM Sans', sans-serif", fontSize: '13px', fontWeight: '500', letterSpacing: '0.06em', textTransform: 'uppercase', color: '#FAF8F5', backgroundColor: '#1A1A1A', border: 'none', borderRadius: '2px', cursor: 'pointer', alignSelf: 'flex-start' },
+  cancelEditBtn: { padding: '14px 32px', fontFamily: "'DM Sans', sans-serif", fontSize: '13px', fontWeight: '400', letterSpacing: '0.06em', textTransform: 'uppercase', color: '#6B6560', backgroundColor: 'transparent', border: '1px solid #E8E4DE', borderRadius: '2px', cursor: 'pointer', alignSelf: 'flex-start', marginLeft: '12px' },
+  formButtonRow: { display: 'flex', alignItems: 'center' },
   success: { fontFamily: "'DM Sans', sans-serif", fontSize: '13px', color: '#27AE60', backgroundColor: '#EDFAF3', padding: '12px 16px', borderRadius: '2px', border: '1px solid #B7EAD0', marginBottom: '24px' },
   error: { fontFamily: "'DM Sans', sans-serif", fontSize: '13px', color: '#C0392B', backgroundColor: '#FDF0EE', padding: '12px 16px', borderRadius: '2px', border: '1px solid #F5C6C0', marginBottom: '24px' },
   divider: { height: '1px', backgroundColor: '#E8E4DE', margin: '40px 0' },
@@ -54,6 +56,17 @@ const s = {
   gateSub: { fontFamily: "'DM Sans', sans-serif", fontSize: '14px', fontWeight: '300', color: '#6B6560', marginBottom: '32px' },
   gateBtn: { display: 'inline-block', padding: '14px 32px', fontFamily: "'DM Sans', sans-serif", fontSize: '13px', fontWeight: '500', letterSpacing: '0.06em', textTransform: 'uppercase', color: '#FAF8F5', backgroundColor: '#1A1A1A', borderRadius: '2px', marginRight: '16px' },
   gateSecondary: { display: 'inline-block', padding: '14px 32px', fontFamily: "'DM Sans', sans-serif", fontSize: '13px', fontWeight: '400', letterSpacing: '0.06em', textTransform: 'uppercase', color: '#6B6560', border: '1px solid #E8E4DE', borderRadius: '2px', cursor: 'pointer', backgroundColor: 'transparent' },
+  myEventsList: { display: 'flex', flexDirection: 'column', gap: '2px' },
+  myEventCard: { backgroundColor: '#F2EEE9', padding: '24px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '16px', flexWrap: 'wrap' },
+  myEventInfo: { flex: 1, minWidth: '200px' },
+  myEventDate: { fontFamily: "'DM Sans', sans-serif", fontSize: '11px', textTransform: 'uppercase', color: '#B07D62', marginBottom: '6px', letterSpacing: '0.08em' },
+  myEventTitle: { fontFamily: "'Cormorant Garamond', serif", fontSize: '22px', fontWeight: '500', color: '#1A1A1A', marginBottom: '4px' },
+  myEventVenue: { fontFamily: "'DM Sans', sans-serif", fontSize: '13px', fontWeight: '300', color: '#6B6560' },
+  myEventActions: { display: 'flex', gap: '8px', flexShrink: 0 },
+  editBtn: { padding: '8px 18px', fontFamily: "'DM Sans', sans-serif", fontSize: '11px', fontWeight: '500', letterSpacing: '0.06em', textTransform: 'uppercase', color: '#1A1A1A', backgroundColor: 'transparent', border: '1px solid #1A1A1A', borderRadius: '2px', cursor: 'pointer' },
+  deleteBtn: { padding: '8px 18px', fontFamily: "'DM Sans', sans-serif", fontSize: '11px', fontWeight: '500', letterSpacing: '0.06em', textTransform: 'uppercase', color: '#C0392B', backgroundColor: 'transparent', border: '1px solid #C0392B', borderRadius: '2px', cursor: 'pointer' },
+  emptyState: { fontFamily: "'Cormorant Garamond', serif", fontSize: '22px', fontStyle: 'italic', color: '#9B9590', textAlign: 'center', padding: '60px 0' },
+  editingBanner: { fontFamily: "'DM Sans', sans-serif", fontSize: '13px', color: '#B07D62', backgroundColor: '#FDF8F5', padding: '12px 16px', borderRadius: '2px', border: '1px solid #E8D5C4', marginBottom: '24px' },
 }
 
 function resizeImage(file, maxWidth = 1000) {
@@ -79,15 +92,26 @@ function resizeImage(file, maxWidth = 1000) {
   })
 }
 
+function formatDate(dateStr) {
+  if (!dateStr) return ''
+  return new Date(dateStr).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })
+}
+
 export default function CuratorPortal() {
   const [user, setUser] = useState(null)
   const [curator, setCurator] = useState(undefined)
   const [portalTab, setPortalTab] = useState('events')
+  const [eventsSubTab, setEventsSubTab] = useState('add')
   const [placesSubTab, setPlacesSubTab] = useState('place')
 
   const [eventForm, setEventForm] = useState(emptyEvent)
   const [placeForm, setPlaceForm] = useState(emptyPlace)
   const [happeningForm, setHappeningForm] = useState(emptyHappening)
+
+  const [myEvents, setMyEvents] = useState([])
+  const [myEventsLoading, setMyEventsLoading] = useState(true)
+  const [editingEventId, setEditingEventId] = useState(null)
+  const [editingFlyerUrl, setEditingFlyerUrl] = useState(null)
 
   const [submitting, setSubmitting] = useState(false)
   const [scanning, setScanning] = useState(false)
@@ -120,6 +144,12 @@ export default function CuratorPortal() {
     return () => subscription.unsubscribe()
   }, [])
 
+  useEffect(() => {
+    if (user && curator?.can_events) {
+      fetchMyEvents()
+    }
+  }, [user, curator])
+
   async function checkCurator(userId) {
     const { data } = await supabase
       .from('curators')
@@ -134,6 +164,17 @@ export default function CuratorPortal() {
         setPortalTab('events')
       }
     }
+  }
+
+  async function fetchMyEvents() {
+    setMyEventsLoading(true)
+    const { data } = await supabase
+      .from('events')
+      .select('*')
+      .eq('curator_id', user.id)
+      .order('date', { ascending: true })
+    setMyEvents(data || [])
+    setMyEventsLoading(false)
   }
 
   function handleEventChange(e) { setEventForm({ ...eventForm, [e.target.name]: e.target.value }) }
@@ -226,24 +267,95 @@ export default function CuratorPortal() {
     return data.publicUrl
   }
 
+  function startEditingEvent(evt) {
+    setEventForm({
+      title: evt.title || '',
+      venue: evt.venue || '',
+      address: evt.address || '',
+      city: evt.city || '',
+      country: evt.country || '',
+      date: evt.date || '',
+      time: evt.time || '',
+      genre: evt.genre || '',
+      description: evt.description || '',
+      ticket_url: evt.ticket_url || '',
+    })
+    setEditingEventId(evt.id)
+    setEditingFlyerUrl(evt.flyer_url || null)
+    setFlyer(null)
+    setFlyerPreview(evt.flyer_url || null)
+    setEventsSubTab('add')
+    setSuccess('')
+    setError('')
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+
+  function cancelEditing() {
+    setEditingEventId(null)
+    setEditingFlyerUrl(null)
+    setEventForm(emptyEvent)
+    setFlyer(null)
+    setFlyerPreview(null)
+    setSuccess('')
+    setError('')
+  }
+
+  async function handleDeleteEvent(evt) {
+    const confirmed = window.confirm(`Delete "${evt.title}"? This can't be undone.`)
+    if (!confirmed) return
+    const { error } = await supabase.from('events').delete().eq('id', evt.id)
+    if (error) {
+      setError('Could not delete that event. Try again.')
+      return
+    }
+    setSuccess(`"${evt.title}" deleted.`)
+    await fetchMyEvents()
+  }
+
   async function handleEventSubmit(e) {
     e.preventDefault()
     setSubmitting(true)
     setError('')
     setSuccess('')
 
-    const flyerUrl = await uploadFlyer()
+    let flyerUrl = editingFlyerUrl
+    if (flyer) {
+      const uploaded = await uploadFlyer()
+      if (uploaded) flyerUrl = uploaded
+    }
 
-    const { error } = await supabase.from('events').insert([{
-      ...eventForm, curator_id: user.id, status: 'published',
-      flyer_url: flyerUrl,
-    }])
-    if (error) { setError('Something went wrong. Try again.') }
-    else {
-      setSuccess('Event added to Get Lored.')
-      setEventForm(emptyEvent)
-      setFlyer(null)
-      setFlyerPreview(null)
+    if (editingEventId) {
+      const { error } = await supabase
+        .from('events')
+        .update({ ...eventForm, flyer_url: flyerUrl })
+        .eq('id', editingEventId)
+
+      if (error) {
+        setError('Something went wrong updating the event. Try again.')
+      } else {
+        setSuccess('Event updated.')
+        setEventForm(emptyEvent)
+        setFlyer(null)
+        setFlyerPreview(null)
+        setEditingEventId(null)
+        setEditingFlyerUrl(null)
+        await fetchMyEvents()
+        setEventsSubTab('mine')
+      }
+    } else {
+      const { error } = await supabase.from('events').insert([{
+        ...eventForm, curator_id: user.id, status: 'published',
+        flyer_url: flyerUrl,
+      }])
+      if (error) {
+        setError('Something went wrong. Try again.')
+      } else {
+        setSuccess('Event added to Get Lored.')
+        setEventForm(emptyEvent)
+        setFlyer(null)
+        setFlyerPreview(null)
+        await fetchMyEvents()
+      }
     }
     setSubmitting(false)
   }
@@ -354,97 +466,151 @@ export default function CuratorPortal() {
 
       {portalTab === 'events' && curator.can_events && (
         <>
-          <h2 style={s.sectionTitle}>Upload flyer</h2>
-          <div style={s.spacer} />
-          <label
-            style={dragActive ? { ...s.flyerBox, ...s.flyerBoxActive } : s.flyerBox}
-            onDragOver={handleDragOver}
-            onDragLeave={handleDragLeave}
-            onDrop={handleDrop}
-          >
-            {flyerPreview ? (
-              <img src={flyerPreview} alt="Flyer preview" style={s.flyerPreview} />
-            ) : (
-              <>
-                <p style={s.flyerLabel}>Drag & drop your flyer here, or click to upload</p>
-                <p style={s.flyerHint}>JPG or PNG</p>
-              </>
-            )}
-            <input type="file" accept="image/*" onChange={handleFlyerChange} style={{ display: 'none' }} />
-          </label>
-
-          {flyer && (
-            <button style={s.scanBtn} onClick={handleScan} disabled={scanning}>
-              {scanning ? 'Reading flyer...' : 'Scan flyer with AI'}
+          <div style={s.subTabs}>
+            <button
+              style={eventsSubTab === 'add' ? { ...s.subTab, ...s.subTabActive } : s.subTab}
+              onClick={() => { setEventsSubTab('add'); setSuccess(''); setError('') }}
+            >
+              {editingEventId ? 'Editing event' : 'Add event'}
             </button>
+            <button
+              style={eventsSubTab === 'mine' ? { ...s.subTab, ...s.subTabActive } : s.subTab}
+              onClick={() => { setEventsSubTab('mine'); setSuccess(''); setError('') }}
+            >
+              My Events ({myEvents.length})
+            </button>
+          </div>
+
+          {eventsSubTab === 'add' && (
+            <>
+              {editingEventId && (
+                <p style={s.editingBanner}>Editing "{eventForm.title || 'this event'}". Changes will update the existing listing.</p>
+              )}
+
+              <h2 style={s.sectionTitle}>Upload flyer</h2>
+              <div style={s.spacer} />
+              <label
+                style={dragActive ? { ...s.flyerBox, ...s.flyerBoxActive } : s.flyerBox}
+                onDragOver={handleDragOver}
+                onDragLeave={handleDragLeave}
+                onDrop={handleDrop}
+              >
+                {flyerPreview ? (
+                  <img src={flyerPreview} alt="Flyer preview" style={s.flyerPreview} />
+                ) : (
+                  <>
+                    <p style={s.flyerLabel}>Drag & drop your flyer here, or click to upload</p>
+                    <p style={s.flyerHint}>JPG or PNG</p>
+                  </>
+                )}
+                <input type="file" accept="image/*" onChange={handleFlyerChange} style={{ display: 'none' }} />
+              </label>
+
+              {flyer && (
+                <button style={s.scanBtn} onClick={handleScan} disabled={scanning}>
+                  {scanning ? 'Reading flyer...' : 'Scan flyer with AI'}
+                </button>
+              )}
+
+              <div style={s.divider} />
+              <h2 style={s.sectionTitle}>Event details</h2>
+
+              <form style={s.form} onSubmit={handleEventSubmit}>
+                <div style={s.fieldGroup}>
+                  <label style={s.label}>Event title</label>
+                  <input style={s.input} name="title" value={eventForm.title} onChange={handleEventChange} placeholder="Event name" required />
+                </div>
+                <div style={s.row}>
+                  <div style={s.fieldGroup}>
+                    <label style={s.label}>Venue</label>
+                    <input style={s.input} name="venue" value={eventForm.venue} onChange={handleEventChange} placeholder="Venue name" />
+                  </div>
+                  <div style={s.fieldGroup}>
+                    <label style={s.label}>Genre</label>
+                    <select style={s.select} name="genre" value={eventForm.genre} onChange={handleEventChange}>
+                      <option value="">Select genre</option>
+                      <option value="Afrobeats">Afrobeats</option>
+                      <option value="Amapiano">Amapiano</option>
+                      <option value="Hip-Hop">Hip-Hop</option>
+                      <option value="House">House</option>
+                      <option value="R&B">R&B</option>
+                      <option value="Reggae">Reggae</option>
+                      <option value="Soca">Soca</option>
+                      <option value="Tech House">Tech House</option>
+                      <option value="Mixed">Mixed</option>
+                      <option value="Other">Other</option>
+                    </select>
+                  </div>
+                </div>
+                <div style={s.fieldGroup}>
+                  <label style={s.label}>Address</label>
+                  <input style={s.input} name="address" value={eventForm.address} onChange={handleEventChange} placeholder="Full address" />
+                </div>
+                <div style={s.row}>
+                  <div style={s.fieldGroup}>
+                    <label style={s.label}>City</label>
+                    <input style={s.input} name="city" value={eventForm.city} onChange={handleEventChange} placeholder="Miami" required />
+                  </div>
+                  <div style={s.fieldGroup}>
+                    <label style={s.label}>Country</label>
+                    <input style={s.input} name="country" value={eventForm.country} onChange={handleEventChange} placeholder="USA" required />
+                  </div>
+                </div>
+                <div style={s.row}>
+                  <div style={s.fieldGroup}>
+                    <label style={s.label}>Date</label>
+                    <input style={s.input} name="date" type="date" value={eventForm.date} onChange={handleEventChange} required />
+                  </div>
+                  <div style={s.fieldGroup}>
+                    <label style={s.label}>Time</label>
+                    <input style={s.input} name="time" value={eventForm.time} onChange={handleEventChange} placeholder="10pm – 3am" />
+                  </div>
+                </div>
+                <div style={s.fieldGroup}>
+                  <label style={s.label}>Ticket link</label>
+                  <input style={s.input} name="ticket_url" value={eventForm.ticket_url} onChange={handleEventChange} placeholder="https://..." />
+                </div>
+                <div style={s.fieldGroup}>
+                  <label style={s.label}>Description</label>
+                  <textarea style={s.textarea} name="description" value={eventForm.description} onChange={handleEventChange} placeholder="Tell people what to expect..." />
+                </div>
+                <div style={s.formButtonRow}>
+                  <button type="submit" style={s.button} disabled={submitting}>
+                    {submitting ? 'Saving...' : editingEventId ? 'Save changes' : 'Add event'}
+                  </button>
+                  {editingEventId && (
+                    <button type="button" style={s.cancelEditBtn} onClick={cancelEditing}>
+                      Cancel
+                    </button>
+                  )}
+                </div>
+              </form>
+            </>
           )}
 
-          <div style={s.divider} />
-          <h2 style={s.sectionTitle}>Event details</h2>
-
-          <form style={s.form} onSubmit={handleEventSubmit}>
-            <div style={s.fieldGroup}>
-              <label style={s.label}>Event title</label>
-              <input style={s.input} name="title" value={eventForm.title} onChange={handleEventChange} placeholder="Event name" required />
-            </div>
-            <div style={s.row}>
-              <div style={s.fieldGroup}>
-                <label style={s.label}>Venue</label>
-                <input style={s.input} name="venue" value={eventForm.venue} onChange={handleEventChange} placeholder="Venue name" />
+          {eventsSubTab === 'mine' && (
+            myEventsLoading ? (
+              <p style={s.emptyState}>Loading your events...</p>
+            ) : myEvents.length === 0 ? (
+              <p style={s.emptyState}>You haven't added any events yet.</p>
+            ) : (
+              <div style={s.myEventsList}>
+                {myEvents.map(evt => (
+                  <div key={evt.id} style={s.myEventCard}>
+                    <div style={s.myEventInfo}>
+                      <p style={s.myEventDate}>{formatDate(evt.date)}</p>
+                      <h3 style={s.myEventTitle}>{evt.title}</h3>
+                      <p style={s.myEventVenue}>{evt.venue}{evt.city ? ` · ${evt.city}` : ''}</p>
+                    </div>
+                    <div style={s.myEventActions}>
+                      <button style={s.editBtn} onClick={() => startEditingEvent(evt)}>Edit</button>
+                      <button style={s.deleteBtn} onClick={() => handleDeleteEvent(evt)}>Delete</button>
+                    </div>
+                  </div>
+                ))}
               </div>
-              <div style={s.fieldGroup}>
-                <label style={s.label}>Genre</label>
-                <select style={s.select} name="genre" value={eventForm.genre} onChange={handleEventChange}>
-                  <option value="">Select genre</option>
-                  <option value="Afrobeats">Afrobeats</option>
-                  <option value="Amapiano">Amapiano</option>
-                  <option value="Hip-Hop">Hip-Hop</option>
-                  <option value="House">House</option>
-                  <option value="R&B">R&B</option>
-                  <option value="Reggae">Reggae</option>
-                  <option value="Soca">Soca</option>
-                  <option value="Tech House">Tech House</option>
-                  <option value="Mixed">Mixed</option>
-                  <option value="Other">Other</option>
-                </select>
-              </div>
-            </div>
-            <div style={s.fieldGroup}>
-              <label style={s.label}>Address</label>
-              <input style={s.input} name="address" value={eventForm.address} onChange={handleEventChange} placeholder="Full address" />
-            </div>
-            <div style={s.row}>
-              <div style={s.fieldGroup}>
-                <label style={s.label}>City</label>
-                <input style={s.input} name="city" value={eventForm.city} onChange={handleEventChange} placeholder="Miami" required />
-              </div>
-              <div style={s.fieldGroup}>
-                <label style={s.label}>Country</label>
-                <input style={s.input} name="country" value={eventForm.country} onChange={handleEventChange} placeholder="USA" required />
-              </div>
-            </div>
-            <div style={s.row}>
-              <div style={s.fieldGroup}>
-                <label style={s.label}>Date</label>
-                <input style={s.input} name="date" type="date" value={eventForm.date} onChange={handleEventChange} required />
-              </div>
-              <div style={s.fieldGroup}>
-                <label style={s.label}>Time</label>
-                <input style={s.input} name="time" value={eventForm.time} onChange={handleEventChange} placeholder="10pm – 3am" />
-              </div>
-            </div>
-            <div style={s.fieldGroup}>
-              <label style={s.label}>Ticket link</label>
-              <input style={s.input} name="ticket_url" value={eventForm.ticket_url} onChange={handleEventChange} placeholder="https://..." />
-            </div>
-            <div style={s.fieldGroup}>
-              <label style={s.label}>Description</label>
-              <textarea style={s.textarea} name="description" value={eventForm.description} onChange={handleEventChange} placeholder="Tell people what to expect..." />
-            </div>
-            <button type="submit" style={s.button} disabled={submitting}>
-              {submitting ? 'Adding...' : 'Add event'}
-            </button>
-          </form>
+            )
+          )}
         </>
       )}
 
