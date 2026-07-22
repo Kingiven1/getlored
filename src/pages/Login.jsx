@@ -11,6 +11,7 @@ const s = {
   form: { display: 'flex', flexDirection: 'column', gap: '16px' },
   label: { fontFamily: "'DM Sans', sans-serif", fontSize: '11px', fontWeight: '500', letterSpacing: '0.08em', textTransform: 'uppercase', color: '#6B6560', marginBottom: '6px', display: 'block' },
   input: { width: '100%', padding: '12px 16px', fontFamily: "'DM Sans', sans-serif", fontSize: '14px', fontWeight: '300', color: '#1A1A1A', backgroundColor: '#F2EEE9', border: '1px solid #E8E4DE', borderRadius: '2px', outline: 'none', boxSizing: 'border-box' },
+  inputError: { border: '1px solid #C0392B' },
   button: { width: '100%', padding: '14px', fontFamily: "'DM Sans', sans-serif", fontSize: '13px', fontWeight: '500', letterSpacing: '0.06em', textTransform: 'uppercase', color: '#FAF8F5', backgroundColor: '#1A1A1A', border: 'none', borderRadius: '2px', cursor: 'pointer', marginTop: '8px' },
   divider: { display: 'flex', alignItems: 'center', gap: '16px', margin: '24px 0' },
   dividerLine: { flex: 1, height: '1px', backgroundColor: '#E8E4DE' },
@@ -21,11 +22,12 @@ const s = {
   toggle: { fontFamily: "'DM Sans', sans-serif", fontSize: '13px', fontWeight: '300', color: '#6B6560', textAlign: 'center', marginTop: '24px' },
   toggleLink: { color: '#1A1A1A', fontWeight: '500', cursor: 'pointer', borderBottom: '1px solid #1A1A1A', paddingBottom: '1px' },
   curatorLink: { fontFamily: "'DM Sans', sans-serif", fontSize: '13px', fontWeight: '300', color: '#9B9590', textAlign: 'center', marginTop: '12px' },
+  hint: { fontFamily: "'DM Sans', sans-serif", fontSize: '11px', color: '#9B9590', marginTop: '4px' },
 }
 
 export default function Login() {
   const [mode, setMode] = useState('login')
-  const [form, setForm] = useState({ email: '', password: '', name: '', city: '', instagram: '' })
+  const [form, setForm] = useState({ email: '', password: '', confirmPassword: '', name: '', city: '', instagram: '' })
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
@@ -37,9 +39,21 @@ export default function Login() {
 
   async function handleSubmit(e) {
     e.preventDefault()
-    setLoading(true)
     setError('')
     setSuccess('')
+
+    if (mode === 'signup') {
+      if (form.password.length < 8) {
+        setError('Password must be at least 8 characters.')
+        return
+      }
+      if (form.password !== form.confirmPassword) {
+        setError('Passwords do not match.')
+        return
+      }
+    }
+
+    setLoading(true)
 
     if (mode === 'login') {
       const { error } = await supabase.auth.signInWithPassword({
@@ -110,7 +124,25 @@ export default function Login() {
           <div>
             <label style={s.label}>Password</label>
             <input style={s.input} type="password" name="password" value={form.password} onChange={handleChange} placeholder="••••••••" required />
+            {mode === 'signup' && <p style={s.hint}>Minimum 8 characters</p>}
           </div>
+          {mode === 'signup' && (
+            <div>
+              <label style={s.label}>Confirm password</label>
+              <input
+                style={{ ...s.input, ...(form.confirmPassword && form.password !== form.confirmPassword ? s.inputError : {}) }}
+                type="password"
+                name="confirmPassword"
+                value={form.confirmPassword}
+                onChange={handleChange}
+                placeholder="••••••••"
+                required
+              />
+              {form.confirmPassword && form.password !== form.confirmPassword && (
+                <p style={{ ...s.hint, color: '#C0392B' }}>Passwords do not match</p>
+              )}
+            </div>
+          )}
           <button type="submit" style={s.button} disabled={loading}>
             {loading ? 'One moment...' : mode === 'login' ? 'Sign in' : 'Create account'}
           </button>
