@@ -37,11 +37,14 @@ export default function Navbar() {
   }
 
   async function fetchPendingCount() {
-    const { count } = await supabase
+    const { count, error } = await supabase
       .from('curator_requests')
       .select('*', { count: 'exact', head: true })
       .eq('status', 'pending')
-    setPendingCount(count || 0)
+    if (error) {
+      console.error('Pending count fetch error:', error)
+    }
+    setPendingCount(count ?? 0)
   }
 
   async function handleSignOut() {
@@ -101,7 +104,7 @@ export default function Navbar() {
               {isAdmin && (
                 <Link to="/control-panel" style={isActive('/control-panel') ? {...s.link, ...s.active} : s.link}>
                   Admin
-                  {pendingCount > 0 && <span style={s.badge}>{pendingCount > 9 ? '9+' : pendingCount}</span>}
+                  <span style={s.badge}>{pendingCount > 9 ? '9+' : pendingCount}</span>
                 </Link>
               )}
               <span style={s.userName}>{userName}</span>
@@ -139,7 +142,7 @@ export default function Navbar() {
               {isAdmin && (
                 <Link to="/control-panel" style={isActive('/control-panel') ? {...s.mobileLink, ...s.mobileActive} : s.mobileLink}>
                   Admin
-                  {pendingCount > 0 && <span style={s.mobileBadge}>{pendingCount > 9 ? '9+' : pendingCount}</span>}
+                  <span style={s.mobileBadge}>{pendingCount > 9 ? '9+' : pendingCount}</span>
                 </Link>
               )}
               <div style={s.mobileDivider} />
