@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useNavigate, Link } from 'react-router-dom'
+import { Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase.js'
 
 const s = {
@@ -16,11 +16,13 @@ const s = {
   button: { width: '100%', padding: '14px', fontFamily: "'DM Sans', sans-serif", fontSize: '13px', fontWeight: '500', letterSpacing: '0.06em', textTransform: 'uppercase', color: '#FAF8F5', backgroundColor: '#1A1A1A', border: 'none', borderRadius: '2px', cursor: 'pointer', marginTop: '8px' },
   divider: { height: '1px', backgroundColor: '#E8E4DE', margin: '16px 0' },
   dividerLabel: { fontFamily: "'DM Sans', sans-serif", fontSize: '11px', fontWeight: '500', letterSpacing: '0.1em', textTransform: 'uppercase', color: '#9B9590', marginBottom: '24px', marginTop: '8px' },
+  error: { fontFamily: "'DM Sans', sans-serif", fontSize: '13px', color: '#C0392B', backgroundColor: '#FDF0EE', padding: '12px 16px', borderRadius: '2px', border: '1px solid #F5C6C0' },
+  warning: { fontFamily: "'DM Sans', sans-serif", fontSize: '13px', color: '#8B6914', backgroundColor: '#FEF9E7', padding: '16px', borderRadius: '2px', border: '1px solid #F9E79F', lineHeight: '1.6' },
+  hint: { fontFamily: "'DM Sans', sans-serif", fontSize: '11px', color: '#9B9590', marginTop: '4px' },
+  inlineLink: { color: '#B07D62', borderBottom: '1px solid #B07D62', paddingBottom: '1px', fontWeight: '500' },
   success: { textAlign: 'center', padding: '48px 0' },
   successHeadline: { fontFamily: "'Cormorant Garamond', serif", fontSize: '36px', fontStyle: 'italic', color: '#1A1A1A', marginBottom: '16px', lineHeight: '1.3' },
   successSub: { fontFamily: "'DM Sans', sans-serif", fontSize: '14px', fontWeight: '300', color: '#6B6560', lineHeight: '1.7' },
-  error: { fontFamily: "'DM Sans', sans-serif", fontSize: '13px', color: '#C0392B', backgroundColor: '#FDF0EE', padding: '12px 16px', borderRadius: '2px', border: '1px solid #F5C6C0' },
-  hint: { fontFamily: "'DM Sans', sans-serif", fontSize: '11px', color: '#9B9590', marginTop: '4px' },
   loginLink: { fontFamily: "'DM Sans', sans-serif", fontSize: '13px', fontWeight: '300', color: '#9B9590', textAlign: 'center', marginTop: '24px' },
 }
 
@@ -32,14 +34,26 @@ export default function RequestAccess() {
   const [loading, setLoading] = useState(false)
   const [submitted, setSubmitted] = useState(false)
   const [error, setError] = useState('')
+  const [accountExists, setAccountExists] = useState(false)
+  const [resetSent, setResetSent] = useState(false)
 
   function handleChange(e) {
     setForm({ ...form, [e.target.name]: e.target.value })
+    if (accountExists) setAccountExists(false)
+    if (error) setError('')
+  }
+
+  async function handlePasswordReset() {
+    await supabase.auth.resetPasswordForEmail(form.email, {
+      redirectTo: `${window.location.origin}/curator-login`,
+    })
+    setResetSent(true)
   }
 
   async function handleSubmit(e) {
     e.preventDefault()
     setError('')
+    setAccountExists(false)
 
     if (form.password.length < 8) {
       setError('Password must be at least 8 characters.')
@@ -61,7 +75,13 @@ export default function RequestAccess() {
     })
 
     if (signUpError) {
-      setError(signUpError.message)
+      if (signUpError.message.toLowerCase().includes('already registered') ||
+          signUpError.message.toLowerCase().includes('already been registered') ||
+          signUpError.message.toLowerCase().includes('user already exists')) {
+        setAccountExists(true)
+      } else {
+        setError(signUpError.message)
+      }
       setLoading(false)
       return
     }
@@ -96,6 +116,8 @@ export default function RequestAccess() {
             If you're the right fit, you'll hear from us soon.<br /><br />
             Once approved, sign in at the curator portal with your email and password.
           </p>
+          <br />
+          <Link to="/curator-login" style={s.inlineLink}>Go to curator sign in →</Link>
         </div>
       </main>
     )
@@ -112,27 +134,42 @@ export default function RequestAccess() {
 
       {error && <p style={s.error}>{error}</p>}
 
+      {accountExists && (
+        <div style={s.warning}>
+          An account with that email already exists.{' '}
+          <Link to="/curator-login" style={s.inlineLink}>Sign in to your portal</Link>
+          {' '}or{' '}
+          {resetSent ? (
+            <span style={{ color: '#27AE60', fontWeight: '500' }}>Reset email sent — check your inbox.</span>
+          ) : (
+            <span
+              style={{ ...s.inlineLink, cursor: 'pointer' }}
+              onClick={handlePasswordReset}
+            >
+              reset your password
+            </span>
+          )}
+          .
+        </div>
+      )}
+
       <form style={s.form} onSubmit={handleSubmit}>
         <div style={s.fieldGroup}>
           <label style={s.label}>Full name</label>
           <input style={s.input} name="name" value={form.name} onChange={handleChange} placeholder="DJ King Iven" required />
         </div>
-
         <div style={s.fieldGroup}>
           <label style={s.label}>Email</label>
           <input style={s.input} name="email" type="email" value={form.email} onChange={handleChange} placeholder="you@example.com" required />
         </div>
-
         <div style={s.fieldGroup}>
           <label style={s.label}>Instagram handle</label>
           <input style={s.input} name="instagram" value={form.instagram} onChange={handleChange} placeholder="@yourhandle" />
         </div>
-
         <div style={s.fieldGroup}>
           <label style={s.label}>Your city</label>
           <input style={s.input} name="city" value={form.city} onChange={handleChange} placeholder="Charlotte, Miami, London..." required />
         </div>
-
         <div style={s.fieldGroup}>
           <label style={s.label}>Why are you the right fit?</label>
           <textarea style={s.textarea} name="why" value={form.why} onChange={handleChange} placeholder="Tell us about your scene, your audience, and what you'd bring to Get Lored..." required />
@@ -146,7 +183,6 @@ export default function RequestAccess() {
           <input style={s.input} name="password" type="password" value={form.password} onChange={handleChange} placeholder="••••••••" required />
           <p style={s.hint}>Minimum 8 characters</p>
         </div>
-
         <div style={s.fieldGroup}>
           <label style={s.label}>Confirm password</label>
           <input
