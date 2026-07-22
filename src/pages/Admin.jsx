@@ -26,6 +26,7 @@ const s = {
   gate: { textAlign: 'center', padding: '120px 32px' },
   gateHeadline: { fontFamily: "'Cormorant Garamond', serif", fontSize: '36px', fontStyle: 'italic', color: '#1A1A1A', marginBottom: '16px' },
   gateSub: { fontFamily: "'DM Sans', sans-serif", fontSize: '14px', fontWeight: '300', color: '#6B6560' },
+  loading: { textAlign: 'center', padding: '120px 32px', fontFamily: "'DM Sans', sans-serif", fontSize: '13px', color: '#9B9590' },
   why: { maxWidth: '300px', whiteSpace: 'pre-wrap', lineHeight: '1.5' },
   success: { fontFamily: "'DM Sans', sans-serif", fontSize: '13px', color: '#27AE60', backgroundColor: '#EDFAF3', padding: '12px 16px', borderRadius: '2px', border: '1px solid #B7EAD0', marginBottom: '24px' },
 }
@@ -52,23 +53,39 @@ export default function Admin() {
   }, [])
 
   async function checkAdmin(userId) {
-    const { data } = await supabase.from('curators').select('role, approved').eq('user_id', userId).single()
-    const admin = data?.role === 'admin' && data?.approved === true
-    setIsAdmin(admin)
-    setLoading(false)
-    if (admin) {
-      fetchRequests()
-      fetchCurators()
+    try {
+      const { data } = await supabase
+        .from('curators')
+        .select('role, approved')
+        .eq('user_id', userId)
+        .single()
+      const admin = data?.role === 'admin' && data?.approved === true
+      setIsAdmin(admin)
+      if (admin) {
+        await fetchRequests()
+        await fetchCurators()
+      }
+    } catch (e) {
+      console.error(e)
+    } finally {
+      setLoading(false)
     }
   }
 
   async function fetchRequests() {
-    const { data } = await supabase.from('curator_requests').select('*').eq('status', 'pending').order('created_at', { ascending: false })
+    const { data } = await supabase
+      .from('curator_requests')
+      .select('*')
+      .eq('status', 'pending')
+      .order('created_at', { ascending: false })
     setRequests(data || [])
   }
 
   async function fetchCurators() {
-    const { data } = await supabase.from('curators').select('*').order('created_at', { ascending: false })
+    const { data } = await supabase
+      .from('curators')
+      .select('*')
+      .order('created_at', { ascending: false })
     setCurators(data || [])
   }
 
@@ -109,7 +126,7 @@ export default function Admin() {
     navigate('/')
   }
 
-  if (loading) return null
+  if (loading) return <p style={s.loading}>Loading dashboard...</p>
 
   if (!user || !isAdmin) {
     return (
