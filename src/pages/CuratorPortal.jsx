@@ -56,7 +56,7 @@ const s = {
   portalTabs: { display: 'flex', borderBottom: '1px solid #E8E4DE', marginBottom: '40px' },
   portalTab: { fontFamily: "'DM Sans', sans-serif", fontSize: '12px', fontWeight: '500', letterSpacing: '0.08em', textTransform: 'uppercase', color: '#9B9590', padding: '12px 24px', cursor: 'pointer', border: 'none', background: 'none', borderBottom: '2px solid transparent', marginBottom: '-1px' },
   portalTabActive: { color: '#1A1A1A', borderBottom: '2px solid #1A1A1A' },
-  subTabs: { display: 'flex', gap: '8px', marginBottom: '32px' },
+  subTabs: { display: 'flex', gap: '8px', marginBottom: '32px', flexWrap: 'wrap' },
   subTab: { padding: '8px 20px', fontFamily: "'DM Sans', sans-serif", fontSize: '12px', fontWeight: '500', letterSpacing: '0.06em', textTransform: 'uppercase', color: '#6B6560', backgroundColor: '#F2EEE9', border: '1px solid #E8E4DE', borderRadius: '2px', cursor: 'pointer' },
   subTabActive: { color: '#FAF8F5', backgroundColor: '#1A1A1A', border: '1px solid #1A1A1A' },
   sectionTitle: { fontFamily: "'Cormorant Garamond', serif", fontSize: '28px', fontWeight: '500', color: '#1A1A1A', marginBottom: '24px', marginTop: '0', lineHeight: '1.4', display: 'block', position: 'relative' },
@@ -93,14 +93,14 @@ const s = {
   filterSelect: { padding: '10px 14px', fontFamily: "'DM Sans', sans-serif", fontSize: '13px', fontWeight: '300', color: '#1A1A1A', backgroundColor: '#F2EEE9', border: '1px solid #E8E4DE', borderRadius: '2px', outline: 'none' },
   filterClear: { padding: '10px 16px', fontFamily: "'DM Sans', sans-serif", fontSize: '12px', color: '#9B9590', backgroundColor: 'transparent', border: '1px solid #E8E4DE', borderRadius: '2px', cursor: 'pointer' },
   resultsCount: { fontFamily: "'DM Sans', sans-serif", fontSize: '12px', color: '#9B9590', marginBottom: '16px' },
-  myEventsList: { display: 'flex', flexDirection: 'column', gap: '2px' },
-  myEventCard: { backgroundColor: '#F2EEE9', padding: '24px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '16px', flexWrap: 'wrap' },
-  myEventCardPast: { opacity: 0.6 },
-  myEventInfo: { flex: 1, minWidth: '200px' },
-  myEventDate: { fontFamily: "'DM Sans', sans-serif", fontSize: '11px', textTransform: 'uppercase', color: '#B07D62', marginBottom: '6px', letterSpacing: '0.08em' },
-  myEventTitle: { fontFamily: "'Cormorant Garamond', serif", fontSize: '22px', fontWeight: '500', color: '#1A1A1A', marginBottom: '4px' },
-  myEventVenue: { fontFamily: "'DM Sans', sans-serif", fontSize: '13px', fontWeight: '300', color: '#6B6560' },
-  myEventActions: { display: 'flex', gap: '8px', flexShrink: 0 },
+  myList: { display: 'flex', flexDirection: 'column', gap: '2px' },
+  myCard: { backgroundColor: '#F2EEE9', padding: '24px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '16px', flexWrap: 'wrap' },
+  myCardPast: { opacity: 0.6 },
+  myInfo: { flex: 1, minWidth: '200px' },
+  myEyebrow: { fontFamily: "'DM Sans', sans-serif", fontSize: '11px', textTransform: 'uppercase', color: '#B07D62', marginBottom: '6px', letterSpacing: '0.08em' },
+  myTitle: { fontFamily: "'Cormorant Garamond', serif", fontSize: '22px', fontWeight: '500', color: '#1A1A1A', marginBottom: '4px' },
+  mySub: { fontFamily: "'DM Sans', sans-serif", fontSize: '13px', fontWeight: '300', color: '#6B6560' },
+  myActions: { display: 'flex', gap: '8px', flexShrink: 0 },
   editBtn: { padding: '8px 18px', fontFamily: "'DM Sans', sans-serif", fontSize: '11px', fontWeight: '500', letterSpacing: '0.06em', textTransform: 'uppercase', color: '#1A1A1A', backgroundColor: 'transparent', border: '1px solid #1A1A1A', borderRadius: '2px', cursor: 'pointer' },
   deleteBtn: { padding: '8px 18px', fontFamily: "'DM Sans', sans-serif", fontSize: '11px', fontWeight: '500', letterSpacing: '0.06em', textTransform: 'uppercase', color: '#C0392B', backgroundColor: 'transparent', border: '1px solid #C0392B', borderRadius: '2px', cursor: 'pointer' },
   emptyState: { fontFamily: "'Cormorant Garamond', serif", fontSize: '22px', fontStyle: 'italic', color: '#9B9590', textAlign: 'center', padding: '60px 0' },
@@ -142,12 +142,18 @@ function isPastDate(dateStr) {
   return new Date(dateStr) < today
 }
 
+function formatCategory(category) {
+  if (!category) return ''
+  return category.replace(/_/g, ' ')
+}
+
 export default function CuratorPortal() {
   const [user, setUser] = useState(null)
   const [curator, setCurator] = useState(undefined)
   const [portalTab, setPortalTab] = useState('events')
   const [eventsSubTab, setEventsSubTab] = useState('add')
-  const [placesSubTab, setPlacesSubTab] = useState('place')
+  const [placesType, setPlacesType] = useState('place') // 'place' | 'happening'
+  const [placesViewMode, setPlacesViewMode] = useState('add') // 'add' | 'mine'
 
   const [eventForm, setEventForm] = useState(emptyEvent)
   const [placeForm, setPlaceForm] = useState(emptyPlace)
@@ -158,9 +164,20 @@ export default function CuratorPortal() {
   const [editingEventId, setEditingEventId] = useState(null)
   const [editingFlyerUrl, setEditingFlyerUrl] = useState(null)
 
+  const [myPlaces, setMyPlaces] = useState([])
+  const [myPlacesLoading, setMyPlacesLoading] = useState(true)
+  const [editingPlaceId, setEditingPlaceId] = useState(null)
+
+  const [myHappenings, setMyHappenings] = useState([])
+  const [myHappeningsLoading, setMyHappeningsLoading] = useState(true)
+  const [editingHappeningId, setEditingHappeningId] = useState(null)
+
   const [sortOrder, setSortOrder] = useState('upcoming')
   const [filterCity, setFilterCity] = useState('')
   const [filterGenre, setFilterGenre] = useState('')
+
+  const [placeFilterCity, setPlaceFilterCity] = useState('')
+  const [placeFilterStyle, setPlaceFilterStyle] = useState('')
 
   const [submitting, setSubmitting] = useState(false)
   const [scanning, setScanning] = useState(false)
@@ -200,6 +217,13 @@ export default function CuratorPortal() {
     }
   }, [user, curator])
 
+  useEffect(() => {
+    if (user && curator?.can_places) {
+      fetchMyPlaces()
+      fetchMyHappenings()
+    }
+  }, [user, curator])
+
   async function checkCurator(userId) {
     const { data } = await supabase
       .from('curators')
@@ -225,6 +249,28 @@ export default function CuratorPortal() {
       .order('date', { ascending: true })
     setMyEvents(data || [])
     setMyEventsLoading(false)
+  }
+
+  async function fetchMyPlaces() {
+    setMyPlacesLoading(true)
+    const { data } = await supabase
+      .from('places')
+      .select('*')
+      .eq('curator_id', user.id)
+      .order('created_at', { ascending: false })
+    setMyPlaces(data || [])
+    setMyPlacesLoading(false)
+  }
+
+  async function fetchMyHappenings() {
+    setMyHappeningsLoading(true)
+    const { data } = await supabase
+      .from('happenings')
+      .select('*')
+      .eq('curator_id', user.id)
+      .order('date', { ascending: true })
+    setMyHappenings(data || [])
+    setMyHappeningsLoading(false)
   }
 
   function handleEventChange(e) { setEventForm({ ...eventForm, [e.target.name]: e.target.value }) }
@@ -364,7 +410,7 @@ export default function CuratorPortal() {
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
-  function cancelEditing() {
+  function cancelEditingEvent() {
     setEditingEventId(null)
     setEditingFlyerUrl(null)
     setEventForm(emptyEvent)
@@ -373,6 +419,59 @@ export default function CuratorPortal() {
     setSuccess('')
     setError('')
     setWarning('')
+  }
+
+  function startEditingPlace(place) {
+    setPlaceForm({
+      name: place.name || '',
+      category: place.category || 'restaurant',
+      dining_style: place.dining_style || '',
+      address: place.address || '',
+      city: place.city || '',
+      country: place.country || '',
+      description: place.description || '',
+      google_maps_url: place.google_maps_url || '',
+      website: place.website || '',
+    })
+    setEditingPlaceId(place.id)
+    setPlacesType('place')
+    setPlacesViewMode('add')
+    setSuccess('')
+    setError('')
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+
+  function cancelEditingPlace() {
+    setEditingPlaceId(null)
+    setPlaceForm(emptyPlace)
+    setSuccess('')
+    setError('')
+  }
+
+  function startEditingHappening(happening) {
+    setHappeningForm({
+      title: happening.title || '',
+      description: happening.description || '',
+      city: happening.city || '',
+      country: happening.country || '',
+      date: happening.date || '',
+      time: happening.time || '',
+      location: happening.location || '',
+      link: happening.link || '',
+    })
+    setEditingHappeningId(happening.id)
+    setPlacesType('happening')
+    setPlacesViewMode('add')
+    setSuccess('')
+    setError('')
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+
+  function cancelEditingHappening() {
+    setEditingHappeningId(null)
+    setHappeningForm(emptyHappening)
+    setSuccess('')
+    setError('')
   }
 
   async function handleDeleteEvent(evt) {
@@ -385,6 +484,30 @@ export default function CuratorPortal() {
     }
     setSuccess(`"${evt.title}" deleted.`)
     await fetchMyEvents()
+  }
+
+  async function handleDeletePlace(place) {
+    const confirmed = window.confirm(`Delete "${place.name}"? This can't be undone.`)
+    if (!confirmed) return
+    const { error } = await supabase.from('places').delete().eq('id', place.id)
+    if (error) {
+      setError('Could not delete that place. Try again.')
+      return
+    }
+    setSuccess(`"${place.name}" deleted.`)
+    await fetchMyPlaces()
+  }
+
+  async function handleDeleteHappening(happening) {
+    const confirmed = window.confirm(`Delete "${happening.title}"? This can't be undone.`)
+    if (!confirmed) return
+    const { error } = await supabase.from('happenings').delete().eq('id', happening.id)
+    if (error) {
+      setError('Could not delete that happening. Try again.')
+      return
+    }
+    setSuccess(`"${happening.title}" deleted.`)
+    await fetchMyHappenings()
   }
 
   async function handleEventSubmit(e) {
@@ -455,11 +578,34 @@ export default function CuratorPortal() {
     setSubmitting(true)
     setError('')
     setSuccess('')
-    const { error } = await supabase.from('places').insert([{
-      ...placeForm, curator_id: user.id,
-    }])
-    if (error) { setError('Something went wrong. Try again.') }
-    else { setSuccess('Place added to Get Lored.'); setPlaceForm(emptyPlace) }
+
+    if (editingPlaceId) {
+      const { error } = await supabase
+        .from('places')
+        .update({ ...placeForm })
+        .eq('id', editingPlaceId)
+
+      if (error) {
+        setError('Something went wrong updating the place. Try again.')
+      } else {
+        setSuccess('Place updated.')
+        setPlaceForm(emptyPlace)
+        setEditingPlaceId(null)
+        await fetchMyPlaces()
+        setPlacesViewMode('mine')
+      }
+    } else {
+      const { error } = await supabase.from('places').insert([{
+        ...placeForm, curator_id: user.id,
+      }])
+      if (error) {
+        setError('Something went wrong. Try again.')
+      } else {
+        setSuccess('Place added to Get Lored.')
+        setPlaceForm(emptyPlace)
+        await fetchMyPlaces()
+      }
+    }
     setSubmitting(false)
   }
 
@@ -472,11 +618,34 @@ export default function CuratorPortal() {
     setSubmitting(true)
     setError('')
     setSuccess('')
-    const { error } = await supabase.from('happenings').insert([{
-      ...happeningForm, curator_id: user.id, status: 'published',
-    }])
-    if (error) { setError('Something went wrong. Try again.') }
-    else { setSuccess('Happening added to Get Lored.'); setHappeningForm(emptyHappening) }
+
+    if (editingHappeningId) {
+      const { error } = await supabase
+        .from('happenings')
+        .update({ ...happeningForm })
+        .eq('id', editingHappeningId)
+
+      if (error) {
+        setError('Something went wrong updating the happening. Try again.')
+      } else {
+        setSuccess('Happening updated.')
+        setHappeningForm(emptyHappening)
+        setEditingHappeningId(null)
+        await fetchMyHappenings()
+        setPlacesViewMode('mine')
+      }
+    } else {
+      const { error } = await supabase.from('happenings').insert([{
+        ...happeningForm, curator_id: user.id, status: 'published',
+      }])
+      if (error) {
+        setError('Something went wrong. Try again.')
+      } else {
+        setSuccess('Happening added to Get Lored.')
+        setHappeningForm(emptyHappening)
+        await fetchMyHappenings()
+      }
+    }
     setSubmitting(false)
   }
 
@@ -539,7 +708,18 @@ export default function CuratorPortal() {
     return 0
   })
 
-  const hasActiveFilters = filterCity || filterGenre || sortOrder !== 'upcoming'
+  const hasActiveEventFilters = filterCity || filterGenre || sortOrder !== 'upcoming'
+
+  const myPlaceCities = [...new Set(myPlaces.map(p => p.city).filter(Boolean))]
+  const myPlaceStyles = [...new Set(myPlaces.map(p => p.dining_style).filter(Boolean))]
+
+  const visiblePlaces = myPlaces.filter(p => {
+    if (placeFilterCity && p.city !== placeFilterCity) return false
+    if (placeFilterStyle && p.dining_style !== placeFilterStyle) return false
+    return true
+  })
+
+  const hasActivePlaceFilters = placeFilterCity || placeFilterStyle
 
   return (
     <main style={s.page}>
@@ -699,7 +879,7 @@ export default function CuratorPortal() {
                     {submitting ? 'Saving...' : editingEventId ? 'Save changes' : 'Add event'}
                   </button>
                   {editingEventId && (
-                    <button type="button" style={s.cancelEditBtn} onClick={cancelEditing}>
+                    <button type="button" style={s.cancelEditBtn} onClick={cancelEditingEvent}>
                       Cancel
                     </button>
                   )}
@@ -742,7 +922,7 @@ export default function CuratorPortal() {
                       ))}
                     </select>
                   </div>
-                  {hasActiveFilters && (
+                  {hasActiveEventFilters && (
                     <button
                       style={s.filterClear}
                       onClick={() => { setFilterCity(''); setFilterGenre(''); setSortOrder('upcoming') }}
@@ -757,15 +937,15 @@ export default function CuratorPortal() {
                 {visibleEvents.length === 0 ? (
                   <p style={s.emptyState}>No events match those filters.</p>
                 ) : (
-                  <div style={s.myEventsList}>
+                  <div style={s.myList}>
                     {visibleEvents.map(evt => (
-                      <div key={evt.id} style={isPastDate(evt.date) ? { ...s.myEventCard, ...s.myEventCardPast } : s.myEventCard}>
-                        <div style={s.myEventInfo}>
-                          <p style={s.myEventDate}>{formatDate(evt.date)}{isPastDate(evt.date) ? ' · Past' : ''}</p>
-                          <h3 style={s.myEventTitle}>{evt.title}</h3>
-                          <p style={s.myEventVenue}>{evt.venue}{evt.city ? ` · ${evt.city}` : ''}{evt.genre ? ` · ${evt.genre}` : ''}</p>
+                      <div key={evt.id} style={isPastDate(evt.date) ? { ...s.myCard, ...s.myCardPast } : s.myCard}>
+                        <div style={s.myInfo}>
+                          <p style={s.myEyebrow}>{formatDate(evt.date)}{isPastDate(evt.date) ? ' · Past' : ''}</p>
+                          <h3 style={s.myTitle}>{evt.title}</h3>
+                          <p style={s.mySub}>{evt.venue}{evt.city ? ` · ${evt.city}` : ''}{evt.genre ? ` · ${evt.genre}` : ''}</p>
                         </div>
-                        <div style={s.myEventActions}>
+                        <div style={s.myActions}>
                           <button style={s.editBtn} onClick={() => startEditingEvent(evt)}>Edit</button>
                           <button style={s.deleteBtn} onClick={() => handleDeleteEvent(evt)}>Delete</button>
                         </div>
@@ -783,130 +963,251 @@ export default function CuratorPortal() {
         <>
           <div style={s.subTabs}>
             <button
-              style={placesSubTab === 'place' ? { ...s.subTab, ...s.subTabActive } : s.subTab}
-              onClick={() => { setPlacesSubTab('place'); setSuccess(''); setError(''); setWarning('') }}
+              style={placesType === 'place' && placesViewMode === 'add' ? { ...s.subTab, ...s.subTabActive } : s.subTab}
+              onClick={() => { setPlacesType('place'); setPlacesViewMode('add'); setSuccess(''); setError(''); setWarning('') }}
             >
-              Add a place
+              {editingPlaceId ? 'Editing place' : 'Add a place'}
             </button>
             <button
-              style={placesSubTab === 'happening' ? { ...s.subTab, ...s.subTabActive } : s.subTab}
-              onClick={() => { setPlacesSubTab('happening'); setSuccess(''); setError(''); setWarning('') }}
+              style={placesType === 'place' && placesViewMode === 'mine' ? { ...s.subTab, ...s.subTabActive } : s.subTab}
+              onClick={() => { setPlacesType('place'); setPlacesViewMode('mine'); setSuccess(''); setError(''); setWarning('') }}
             >
-              Add a happening
+              My Places ({myPlaces.length})
+            </button>
+            <button
+              style={placesType === 'happening' && placesViewMode === 'add' ? { ...s.subTab, ...s.subTabActive } : s.subTab}
+              onClick={() => { setPlacesType('happening'); setPlacesViewMode('add'); setSuccess(''); setError(''); setWarning('') }}
+            >
+              {editingHappeningId ? 'Editing happening' : 'Add a happening'}
+            </button>
+            <button
+              style={placesType === 'happening' && placesViewMode === 'mine' ? { ...s.subTab, ...s.subTabActive } : s.subTab}
+              onClick={() => { setPlacesType('happening'); setPlacesViewMode('mine'); setSuccess(''); setError(''); setWarning('') }}
+            >
+              My Happenings ({myHappenings.length})
             </button>
           </div>
 
-          {placesSubTab === 'place' && (
-            <form style={s.form} onSubmit={handlePlaceSubmit}>
-              <div style={s.fieldGroup}>
-                <label style={s.label}>Name</label>
-                <input style={s.input} name="name" value={placeForm.name} onChange={handlePlaceChange} placeholder="Place name" required />
-              </div>
-              <div style={s.row}>
+          {placesType === 'place' && placesViewMode === 'add' && (
+            <>
+              {editingPlaceId && (
+                <p style={s.editingBanner}>Editing "{placeForm.name || 'this place'}". Changes will update the existing listing.</p>
+              )}
+              <form style={s.form} onSubmit={handlePlaceSubmit}>
                 <div style={s.fieldGroup}>
-                  <label style={s.label}>Category</label>
-                  <select style={s.select} name="category" value={placeForm.category} onChange={handlePlaceChange}>
-                    <option value="restaurant">Restaurant</option>
-                    <option value="coffee">Coffee shop</option>
-                    <option value="bar">Bar</option>
-                    <option value="music_venue">Music venue</option>
-                    <option value="attraction">Attraction</option>
-                  </select>
+                  <label style={s.label}>Name</label>
+                  <input style={s.input} name="name" value={placeForm.name} onChange={handlePlaceChange} placeholder="Place name" required />
+                </div>
+                <div style={s.row}>
+                  <div style={s.fieldGroup}>
+                    <label style={s.label}>Category</label>
+                    <select style={s.select} name="category" value={placeForm.category} onChange={handlePlaceChange}>
+                      <option value="restaurant">Restaurant</option>
+                      <option value="coffee">Coffee shop</option>
+                      <option value="bar">Bar</option>
+                      <option value="music_venue">Music venue</option>
+                      <option value="attraction">Attraction</option>
+                    </select>
+                  </div>
+                  <div style={s.fieldGroup}>
+                    <label style={s.label}>Dining style</label>
+                    <select style={s.select} name="dining_style" value={placeForm.dining_style} onChange={handlePlaceChange} required>
+                      <option value="">Select style</option>
+                      {DINING_STYLES.map(style => (
+                        <option key={style} value={style}>{style}</option>
+                      ))}
+                    </select>
+                  </div>
                 </div>
                 <div style={s.fieldGroup}>
-                  <label style={s.label}>Dining style</label>
-                  <select style={s.select} name="dining_style" value={placeForm.dining_style} onChange={handlePlaceChange} required>
-                    <option value="">Select style</option>
-                    {DINING_STYLES.map(style => (
-                      <option key={style} value={style}>{style}</option>
-                    ))}
-                  </select>
+                  <label style={s.label}>Address</label>
+                  <input style={s.input} name="address" value={placeForm.address} onChange={handlePlaceChange} placeholder="Full address" />
                 </div>
-              </div>
-              <div style={s.fieldGroup}>
-                <label style={s.label}>Address</label>
-                <input style={s.input} name="address" value={placeForm.address} onChange={handlePlaceChange} placeholder="Full address" />
-              </div>
-              <div style={s.row}>
-                <div style={s.fieldGroup}>
-                  <label style={s.label}>City</label>
-                  <select style={s.select} value={placeForm.city} onChange={handlePlaceCitySelect} required>
-                    <option value="">Select city</option>
-                    {SUPPORTED_CITIES.map(c => (
-                      <option key={c.city} value={c.city}>{c.city}</option>
-                    ))}
-                  </select>
+                <div style={s.row}>
+                  <div style={s.fieldGroup}>
+                    <label style={s.label}>City</label>
+                    <select style={s.select} value={placeForm.city} onChange={handlePlaceCitySelect} required>
+                      <option value="">Select city</option>
+                      {SUPPORTED_CITIES.map(c => (
+                        <option key={c.city} value={c.city}>{c.city}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div style={s.fieldGroup}>
+                    <label style={s.label}>Country</label>
+                    <input style={s.inputDisabled} value={placeForm.country} placeholder="Auto-filled" disabled />
+                  </div>
                 </div>
                 <div style={s.fieldGroup}>
-                  <label style={s.label}>Country</label>
-                  <input style={s.inputDisabled} value={placeForm.country} placeholder="Auto-filled" disabled />
+                  <label style={s.label}>Google Maps link</label>
+                  <input style={s.input} name="google_maps_url" value={placeForm.google_maps_url} onChange={handlePlaceChange} placeholder="https://maps.app.goo.gl/..." />
                 </div>
-              </div>
-              <div style={s.fieldGroup}>
-                <label style={s.label}>Google Maps link</label>
-                <input style={s.input} name="google_maps_url" value={placeForm.google_maps_url} onChange={handlePlaceChange} placeholder="https://maps.app.goo.gl/..." />
-              </div>
-              <div style={s.fieldGroup}>
-                <label style={s.label}>Website</label>
-                <input style={s.input} name="website" value={placeForm.website} onChange={handlePlaceChange} placeholder="https://..." />
-              </div>
-              <div style={s.fieldGroup}>
-                <label style={s.label}>Description</label>
-                <textarea style={s.textarea} name="description" value={placeForm.description} onChange={handlePlaceChange} placeholder="What makes this spot worth knowing about..." />
-              </div>
-              <button type="submit" style={s.button} disabled={submitting}>
-                {submitting ? 'Adding...' : 'Add place'}
-              </button>
-            </form>
+                <div style={s.fieldGroup}>
+                  <label style={s.label}>Website</label>
+                  <input style={s.input} name="website" value={placeForm.website} onChange={handlePlaceChange} placeholder="https://..." />
+                </div>
+                <div style={s.fieldGroup}>
+                  <label style={s.label}>Description</label>
+                  <textarea style={s.textarea} name="description" value={placeForm.description} onChange={handlePlaceChange} placeholder="What makes this spot worth knowing about..." />
+                </div>
+                <div style={s.formButtonRow}>
+                  <button type="submit" style={s.button} disabled={submitting}>
+                    {submitting ? 'Saving...' : editingPlaceId ? 'Save changes' : 'Add place'}
+                  </button>
+                  {editingPlaceId && (
+                    <button type="button" style={s.cancelEditBtn} onClick={cancelEditingPlace}>
+                      Cancel
+                    </button>
+                  )}
+                </div>
+              </form>
+            </>
           )}
 
-          {placesSubTab === 'happening' && (
-            <form style={s.form} onSubmit={handleHappeningSubmit}>
-              <div style={s.fieldGroup}>
-                <label style={s.label}>Title</label>
-                <input style={s.input} name="title" value={happeningForm.title} onChange={handleHappeningChange} placeholder="Pop-up, festival, market..." required />
-              </div>
-              <div style={s.fieldGroup}>
-                <label style={s.label}>Location</label>
-                <input style={s.input} name="location" value={happeningForm.location} onChange={handleHappeningChange} placeholder="Where's it happening" />
-              </div>
-              <div style={s.row}>
-                <div style={s.fieldGroup}>
-                  <label style={s.label}>City</label>
-                  <select style={s.select} value={happeningForm.city} onChange={handleHappeningCitySelect} required>
-                    <option value="">Select city</option>
-                    {SUPPORTED_CITIES.map(c => (
-                      <option key={c.city} value={c.city}>{c.city}</option>
+          {placesType === 'place' && placesViewMode === 'mine' && (
+            myPlacesLoading ? (
+              <p style={s.emptyState}>Loading your places...</p>
+            ) : myPlaces.length === 0 ? (
+              <p style={s.emptyState}>You haven't added any places yet.</p>
+            ) : (
+              <>
+                <div style={s.filterBar}>
+                  <div style={s.filterGroup}>
+                    <label style={s.filterLabel}>City</label>
+                    <select style={s.filterSelect} value={placeFilterCity} onChange={(e) => setPlaceFilterCity(e.target.value)}>
+                      <option value="">All cities</option>
+                      {myPlaceCities.map(c => (
+                        <option key={c} value={c}>{c}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div style={s.filterGroup}>
+                    <label style={s.filterLabel}>Dining style</label>
+                    <select style={s.filterSelect} value={placeFilterStyle} onChange={(e) => setPlaceFilterStyle(e.target.value)}>
+                      <option value="">All styles</option>
+                      {myPlaceStyles.map(st => (
+                        <option key={st} value={st}>{st}</option>
+                      ))}
+                    </select>
+                  </div>
+                  {hasActivePlaceFilters && (
+                    <button
+                      style={s.filterClear}
+                      onClick={() => { setPlaceFilterCity(''); setPlaceFilterStyle('') }}
+                    >
+                      Clear filters
+                    </button>
+                  )}
+                </div>
+
+                <p style={s.resultsCount}>{visiblePlaces.length} place{visiblePlaces.length !== 1 ? 's' : ''}</p>
+
+                {visiblePlaces.length === 0 ? (
+                  <p style={s.emptyState}>No places match those filters.</p>
+                ) : (
+                  <div style={s.myList}>
+                    {visiblePlaces.map(place => (
+                      <div key={place.id} style={s.myCard}>
+                        <div style={s.myInfo}>
+                          <p style={s.myEyebrow}>{place.dining_style || formatCategory(place.category)}</p>
+                          <h3 style={s.myTitle}>{place.name}</h3>
+                          <p style={s.mySub}>{place.city}{place.address ? ` · ${place.address}` : ''}</p>
+                        </div>
+                        <div style={s.myActions}>
+                          <button style={s.editBtn} onClick={() => startEditingPlace(place)}>Edit</button>
+                          <button style={s.deleteBtn} onClick={() => handleDeletePlace(place)}>Delete</button>
+                        </div>
+                      </div>
                     ))}
-                  </select>
+                  </div>
+                )}
+              </>
+            )
+          )}
+
+          {placesType === 'happening' && placesViewMode === 'add' && (
+            <>
+              {editingHappeningId && (
+                <p style={s.editingBanner}>Editing "{happeningForm.title || 'this happening'}". Changes will update the existing listing.</p>
+              )}
+              <form style={s.form} onSubmit={handleHappeningSubmit}>
+                <div style={s.fieldGroup}>
+                  <label style={s.label}>Title</label>
+                  <input style={s.input} name="title" value={happeningForm.title} onChange={handleHappeningChange} placeholder="Pop-up, festival, market..." required />
                 </div>
                 <div style={s.fieldGroup}>
-                  <label style={s.label}>Country</label>
-                  <input style={s.inputDisabled} value={happeningForm.country} placeholder="Auto-filled" disabled />
+                  <label style={s.label}>Location</label>
+                  <input style={s.input} name="location" value={happeningForm.location} onChange={handleHappeningChange} placeholder="Where's it happening" />
                 </div>
-              </div>
-              <div style={s.row}>
+                <div style={s.row}>
+                  <div style={s.fieldGroup}>
+                    <label style={s.label}>City</label>
+                    <select style={s.select} value={happeningForm.city} onChange={handleHappeningCitySelect} required>
+                      <option value="">Select city</option>
+                      {SUPPORTED_CITIES.map(c => (
+                        <option key={c.city} value={c.city}>{c.city}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div style={s.fieldGroup}>
+                    <label style={s.label}>Country</label>
+                    <input style={s.inputDisabled} value={happeningForm.country} placeholder="Auto-filled" disabled />
+                  </div>
+                </div>
+                <div style={s.row}>
+                  <div style={s.fieldGroup}>
+                    <label style={s.label}>Date</label>
+                    <input style={s.input} name="date" type="date" value={happeningForm.date} onChange={handleHappeningChange} />
+                  </div>
+                  <div style={s.fieldGroup}>
+                    <label style={s.label}>Time</label>
+                    <input style={s.input} name="time" value={happeningForm.time} onChange={handleHappeningChange} placeholder="12pm – 6pm" />
+                  </div>
+                </div>
                 <div style={s.fieldGroup}>
-                  <label style={s.label}>Date</label>
-                  <input style={s.input} name="date" type="date" value={happeningForm.date} onChange={handleHappeningChange} />
+                  <label style={s.label}>Link</label>
+                  <input style={s.input} name="link" value={happeningForm.link} onChange={handleHappeningChange} placeholder="https://..." />
                 </div>
                 <div style={s.fieldGroup}>
-                  <label style={s.label}>Time</label>
-                  <input style={s.input} name="time" value={happeningForm.time} onChange={handleHappeningChange} placeholder="12pm – 6pm" />
+                  <label style={s.label}>Description</label>
+                  <textarea style={s.textarea} name="description" value={happeningForm.description} onChange={handleHappeningChange} placeholder="Tell people what to expect..." />
                 </div>
+                <div style={s.formButtonRow}>
+                  <button type="submit" style={s.button} disabled={submitting}>
+                    {submitting ? 'Saving...' : editingHappeningId ? 'Save changes' : 'Add happening'}
+                  </button>
+                  {editingHappeningId && (
+                    <button type="button" style={s.cancelEditBtn} onClick={cancelEditingHappening}>
+                      Cancel
+                    </button>
+                  )}
+                </div>
+              </form>
+            </>
+          )}
+
+          {placesType === 'happening' && placesViewMode === 'mine' && (
+            myHappeningsLoading ? (
+              <p style={s.emptyState}>Loading your happenings...</p>
+            ) : myHappenings.length === 0 ? (
+              <p style={s.emptyState}>You haven't added any happenings yet.</p>
+            ) : (
+              <div style={s.myList}>
+                {myHappenings.map(h => (
+                  <div key={h.id} style={isPastDate(h.date) ? { ...s.myCard, ...s.myCardPast } : s.myCard}>
+                    <div style={s.myInfo}>
+                      <p style={s.myEyebrow}>{formatDate(h.date)}{h.time ? ` · ${h.time}` : ''}{isPastDate(h.date) ? ' · Past' : ''}</p>
+                      <h3 style={s.myTitle}>{h.title}</h3>
+                      <p style={s.mySub}>{h.location}{h.city ? ` · ${h.city}` : ''}</p>
+                    </div>
+                    <div style={s.myActions}>
+                      <button style={s.editBtn} onClick={() => startEditingHappening(h)}>Edit</button>
+                      <button style={s.deleteBtn} onClick={() => handleDeleteHappening(h)}>Delete</button>
+                    </div>
+                  </div>
+                ))}
               </div>
-              <div style={s.fieldGroup}>
-                <label style={s.label}>Link</label>
-                <input style={s.input} name="link" value={happeningForm.link} onChange={handleHappeningChange} placeholder="https://..." />
-              </div>
-              <div style={s.fieldGroup}>
-                <label style={s.label}>Description</label>
-                <textarea style={s.textarea} name="description" value={happeningForm.description} onChange={handleHappeningChange} placeholder="Tell people what to expect..." />
-              </div>
-              <button type="submit" style={s.button} disabled={submitting}>
-                {submitting ? 'Adding...' : 'Add happening'}
-              </button>
-            </form>
+            )
           )}
         </>
       )}
