@@ -13,6 +13,7 @@ const s = {
   input: { width: '100%', padding: '12px 16px', fontFamily: "'DM Sans', sans-serif", fontSize: '14px', fontWeight: '300', color: '#1A1A1A', backgroundColor: '#F2EEE9', border: '1px solid #E8E4DE', borderRadius: '2px', outline: 'none', boxSizing: 'border-box' },
   inputError: { border: '1px solid #C0392B' },
   button: { width: '100%', padding: '14px', fontFamily: "'DM Sans', sans-serif", fontSize: '13px', fontWeight: '500', letterSpacing: '0.06em', textTransform: 'uppercase', color: '#FAF8F5', backgroundColor: '#1A1A1A', border: 'none', borderRadius: '2px', cursor: 'pointer', marginTop: '8px' },
+  buttonDisabled: { opacity: 0.5, cursor: 'not-allowed' },
   divider: { display: 'flex', alignItems: 'center', gap: '16px', margin: '24px 0' },
   dividerLine: { flex: 1, height: '1px', backgroundColor: '#E8E4DE' },
   dividerText: { fontFamily: "'DM Sans', sans-serif", fontSize: '11px', color: '#9B9590', letterSpacing: '0.08em', textTransform: 'uppercase' },
@@ -23,11 +24,17 @@ const s = {
   toggleLink: { color: '#1A1A1A', fontWeight: '500', cursor: 'pointer', borderBottom: '1px solid #1A1A1A', paddingBottom: '1px' },
   curatorLink: { fontFamily: "'DM Sans', sans-serif", fontSize: '13px', fontWeight: '300', color: '#9B9590', textAlign: 'center', marginTop: '12px' },
   hint: { fontFamily: "'DM Sans', sans-serif", fontSize: '11px', color: '#9B9590', marginTop: '4px' },
+  checkboxRow: { display: 'flex', alignItems: 'flex-start', gap: '10px' },
+  checkbox: { marginTop: '3px', flexShrink: 0, width: '15px', height: '15px', cursor: 'pointer', accentColor: '#1A1A1A' },
+  checkboxLabel: { fontFamily: "'DM Sans', sans-serif", fontSize: '12px', fontWeight: '300', color: '#6B6560', lineHeight: '1.5', cursor: 'pointer' },
+  checkboxLink: { color: '#B07D62', borderBottom: '1px solid #B07D62', paddingBottom: '1px' },
 }
 
 export default function Login() {
   const [mode, setMode] = useState('login')
   const [form, setForm] = useState({ email: '', password: '', confirmPassword: '', name: '', city: '', instagram: '' })
+  const [agreedToPolicy, setAgreedToPolicy] = useState(false)
+  const [marketingOptIn, setMarketingOptIn] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
@@ -51,6 +58,10 @@ export default function Login() {
         setError('Passwords do not match.')
         return
       }
+      if (!agreedToPolicy) {
+        setError('Please acknowledge the Privacy Policy to continue.')
+        return
+      }
     }
 
     setLoading(true)
@@ -63,15 +74,26 @@ export default function Login() {
       if (error) { setError(error.message) }
       else { navigate('/cities') }
     } else {
-      const { error } = await supabase.auth.signUp({
+      const { data, error } = await supabase.auth.signUp({
         email: form.email,
         password: form.password,
         options: {
           data: { name: form.name, city: form.city, instagram: form.instagram }
         }
       })
-      if (error) { setError(error.message) }
-      else {
+      if (error) {
+        setError(error.message)
+      } else {
+        const userId = data?.user?.id
+        if (userId) {
+          await supabase.from('marketing_consent').insert([{
+            user_id: userId,
+            email: form.email,
+            email_opt_in: marketingOptIn,
+            opted_in_at: marketingOptIn ? new Date().toISOString() : null,
+            consent_version: 'v1',
+          }])
+        }
         setSuccess('Welcome to Get Lored.')
         setTimeout(() => navigate('/cities'), 1500)
       }
@@ -143,7 +165,43 @@ export default function Login() {
               )}
             </div>
           )}
-          <button type="submit" style={s.button} disabled={loading}>
+
+          {mode === 'signup' && (
+            <>
+              <label style={s.checkboxRow}>
+                <input
+                  type="checkbox"
+                  style={s.checkbox}
+                  checked={agreedToPolicy}
+                  onChange={(e) => setAgreedToPolicy(e.target.checked)}
+                  required
+                />
+                <span style={s.checkboxLabel}>
+                  I acknowledge Get Lored's{' '}
+                  <Link to="/privacy" target="_blank" style={s.checkboxLink}>Privacy Policy</Link>{' '}and{' '}
+                  <Link to="/terms" target="_blank" style={s.checkboxLink}>Terms of Service</Link>.
+                </span>
+              </label>
+
+              <label style={s.checkboxRow}>
+                <input
+                  type="checkbox"
+                  style={s.checkbox}
+                  checked={marketingOptIn}
+                  onChange={(e) => setMarketingOptIn(e.target.checked)}
+                />
+                <span style={s.checkboxLabel}>
+                  Send me event drops, city updates, and news from Get Lored. (Optional — unsubscribe anytime.)
+                </span>
+              </label>
+            </>
+          )}
+
+          <button
+            type="submit"
+            style={mode === 'signup' && !agreedToPolicy ? { ...s.button, ...s.buttonDisabled } : s.button}
+            disabled={loading || (mode === 'signup' && !agreedToPolicy)}
+          >
             {loading ? 'One moment...' : mode === 'login' ? 'Sign in' : 'Create account'}
           </button>
         </form>
