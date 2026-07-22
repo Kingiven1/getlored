@@ -45,9 +45,9 @@ export default function CityPage() {
   }
 
   const filtered = places.filter(p => {
-    if (activeTab === 'restaurants') return p.category === 'restaurant'
+    if (activeTab === 'restaurants') return p.category === 'restaurant' || p.category === 'coffee'
     if (activeTab === 'bars') return BAR_CATEGORIES.includes(p.category)
-    return p.category !== 'restaurant' && !BAR_CATEGORIES.includes(p.category)
+    return !['restaurant', 'coffee', ...BAR_CATEGORIES].includes(p.category)
   })
 
   const s = {
