@@ -21,22 +21,26 @@ export default function CityPage() {
   const [activeTab, setActiveTab] = useState('events')
   const [events, setEvents] = useState([])
   const [places, setPlaces] = useState([])
+  const [happenings, setHappenings] = useState([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => { fetchData() }, [city])
 
   async function fetchData() {
     setLoading(true)
-    const [eventsRes, placesRes] = await Promise.all([
+    const [eventsRes, placesRes, happeningsRes] = await Promise.all([
       supabase.from('events').select('*').ilike('city', meta.name).eq('status', 'published').order('date', { ascending: true }),
       supabase.from('places').select('*').ilike('city', meta.name).order('created_at', { ascending: false }),
+      supabase.from('happenings').select('*').ilike('city', meta.name).eq('status', 'published').order('date', { ascending: true }),
     ])
     setEvents(eventsRes.data || [])
     setPlaces(placesRes.data || [])
+    setHappenings(happeningsRes.data || [])
     setLoading(false)
   }
 
   function formatDate(dateStr) {
+    if (!dateStr) return ''
     return new Date(dateStr).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })
   }
 
@@ -51,7 +55,7 @@ export default function CityPage() {
     back: { fontFamily: "'DM Sans', sans-serif", fontSize: '12px', textTransform: 'uppercase', color: '#9B9590', marginBottom: '40px', display: 'inline-block', letterSpacing: '0.08em' },
     headline: { fontFamily: "'Cormorant Garamond', serif", fontSize: 'clamp(48px, 7vw, 80px)', fontWeight: '500', color: '#1A1A1A', marginBottom: '8px' },
     country: { fontFamily: "'DM Sans', sans-serif", fontSize: '12px', textTransform: 'uppercase', color: '#B07D62', letterSpacing: '0.1em' },
-    tabs: { display: 'flex', borderBottom: '1px solid #E8E4DE', marginBottom: '48px', marginTop: '48px' },
+    tabs: { display: 'flex', borderBottom: '1px solid #E8E4DE', marginBottom: '48px', marginTop: '48px', flexWrap: 'wrap' },
     tab: { fontFamily: "'DM Sans', sans-serif", fontSize: '12px', textTransform: 'uppercase', color: '#9B9590', padding: '12px 24px', cursor: 'pointer', border: 'none', background: 'none', borderBottom: '2px solid transparent', marginBottom: '-1px', letterSpacing: '0.08em' },
     tabActive: { color: '#1A1A1A', borderBottom: '2px solid #1A1A1A' },
     grid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '2px' },
@@ -71,7 +75,7 @@ export default function CityPage() {
       <h1 style={s.headline}>{meta.name}</h1>
       <p style={s.country}>{meta.country}</p>
       <div style={s.tabs}>
-        {['events', 'restaurants', 'bars', 'attractions'].map(tab => (
+        {['events', 'happenings', 'restaurants', 'bars', 'attractions'].map(tab => (
           <button key={tab} style={activeTab === tab ? { ...s.tab, ...s.tabActive } : s.tab} onClick={() => setActiveTab(tab)}>
             {tab === 'bars' ? 'Bars & Venues' : tab}
           </button>
@@ -88,6 +92,19 @@ export default function CityPage() {
                   <p style={s.cardSub}>{e.venue}</p>
                   {e.genre && <span style={s.tag}>{e.genre}</span>}
                 </Link>
+              ))}
+            </div>
+          )
+        ) : activeTab === 'happenings' ? (
+          happenings.length === 0 ? <p style={s.empty}>Nothing happening yet.</p> : (
+            <div style={s.grid}>
+              {happenings.map(h => (
+                <div key={h.id} style={s.card}>
+                  <p style={s.cardDate}>{formatDate(h.date)}{h.time ? ` · ${h.time}` : ''}</p>
+                  <h2 style={s.cardTitle}>{h.title}</h2>
+                  <p style={s.cardSub}>{h.location}</p>
+                  {h.link && <a href={h.link} target="_blank" rel="noopener noreferrer" style={s.tag}>More info</a>}
+                </div>
               ))}
             </div>
           )
