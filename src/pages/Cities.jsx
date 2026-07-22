@@ -1,14 +1,14 @@
 import { Link } from 'react-router-dom'
 
 const cities = [
-  { name: 'Miami', country: 'USA', slug: 'miami', emoji: '🌴', region: 'Americas' },
-  { name: 'New York', country: 'USA', slug: 'new-york', emoji: '🗽', region: 'Americas' },
-  { name: 'Charlotte', country: 'USA', slug: 'charlotte', emoji: '👑', region: 'Americas' },
-  { name: 'Toronto', country: 'Canada', slug: 'toronto', emoji: '🍁', region: 'Americas' },
-  { name: 'London', country: 'UK', slug: 'london', emoji: '🇬🇧', region: 'Europe' },
-  { name: 'Paris', country: 'France', slug: 'paris', emoji: '🗼', region: 'Europe' },
-  { name: 'Ibiza', country: 'Spain', slug: 'ibiza', emoji: '🌊', region: 'Europe' },
-  { name: 'Lagos', country: 'Nigeria', slug: 'lagos', emoji: '🌍', region: 'Africa' },
+  { name: 'Washington DC', country: 'USA', slug: 'washington-dc', region: 'Americas' },
+  { name: 'Charlotte', country: 'USA', slug: 'charlotte', region: 'Americas' },
+  { name: 'Chicago', country: 'USA', slug: 'chicago', region: 'Americas' },
+  { name: 'Atlanta', country: 'USA', slug: 'atlanta', region: 'Americas' },
+  { name: 'Mexico City', country: 'Mexico', slug: 'mexico-city', region: 'Americas' },
+  { name: 'Panama City', country: 'Panama', slug: 'panama-city', region: 'Americas' },
+  { name: 'Lisbon', country: 'Portugal', slug: 'lisbon', region: 'Europe' },
+  { name: 'Amsterdam', country: 'Netherlands', slug: 'amsterdam', region: 'Europe' },
 ]
 
 const regions = ['Americas', 'Europe', 'Africa']
@@ -72,11 +72,6 @@ const styles = {
     display: 'block',
     transition: 'background 0.2s',
   },
-  cityEmoji: {
-    fontSize: '24px',
-    marginBottom: '12px',
-    display: 'block',
-  },
   cityName: {
     fontFamily: "'Cormorant Garamond', serif",
     fontSize: '26px',
@@ -119,7 +114,6 @@ export default function Cities() {
                   to={`/cities/${city.slug}`}
                   style={styles.cityCard}
                 >
-                  <span style={styles.cityEmoji}>{city.emoji}</span>
                   <div style={styles.cityName}>{city.name}</div>
                   <div style={styles.cityCountry}>{city.country}</div>
                 </Link>
