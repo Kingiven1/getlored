@@ -31,6 +31,7 @@ const s = {
   subTab: { padding: '8px 20px', fontFamily: "'DM Sans', sans-serif", fontSize: '12px', fontWeight: '500', letterSpacing: '0.06em', textTransform: 'uppercase', color: '#6B6560', backgroundColor: '#F2EEE9', border: '1px solid #E8E4DE', borderRadius: '2px', cursor: 'pointer' },
   subTabActive: { color: '#FAF8F5', backgroundColor: '#1A1A1A', border: '1px solid #1A1A1A' },
   flyerBox: { border: '2px dashed #E8E4DE', borderRadius: '4px', padding: '40px', textAlign: 'center', marginBottom: '32px', cursor: 'pointer', backgroundColor: '#F9F7F4' },
+  flyerBoxActive: { border: '2px dashed #B07D62', backgroundColor: '#FDF8F5' },
   flyerLabel: { fontFamily: "'DM Sans', sans-serif", fontSize: '13px', color: '#9B9590', marginBottom: '8px' },
   flyerHint: { fontFamily: "'DM Sans', sans-serif", fontSize: '11px', color: '#B8B4AF', letterSpacing: '0.06em', textTransform: 'uppercase' },
   flyerPreview: { width: '100%', maxHeight: '300px', objectFit: 'contain', borderRadius: '2px', marginBottom: '16px' },
@@ -54,6 +55,30 @@ const s = {
   gateSecondary: { display: 'inline-block', padding: '14px 32px', fontFamily: "'DM Sans', sans-serif", fontSize: '13px', fontWeight: '400', letterSpacing: '0.06em', textTransform: 'uppercase', color: '#6B6560', border: '1px solid #E8E4DE', borderRadius: '2px', cursor: 'pointer', backgroundColor: 'transparent' },
 }
 
+// Resize an image file client-side so uploaded flyers stay small but legible
+function resizeImage(file, maxWidth = 1000) {
+  return new Promise((resolve, reject) => {
+    const img = new Image()
+    const reader = new FileReader()
+    reader.onload = (e) => { img.src = e.target.result }
+    reader.onerror = reject
+    img.onload = () => {
+      const scale = Math.min(1, maxWidth / img.width)
+      const canvas = document.createElement('canvas')
+      canvas.width = img.width * scale
+      canvas.height = img.height * scale
+      const ctx = canvas.getContext('2d')
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height)
+      canvas.toBlob((blob) => {
+        if (!blob) return reject(new Error('Could not process image'))
+        resolve(new File([blob], file.name.replace(/\.[^.]+$/, '.jpg'), { type: 'image/jpeg' }))
+      }, 'image/jpeg', 0.82)
+    }
+    img.onerror = reject
+    reader.readAsDataURL(file)
+  })
+}
+
 export default function CuratorPortal() {
   const [user, setUser] = useState(null)
   const [curator, setCurator] = useState(undefined)
@@ -70,6 +95,7 @@ export default function CuratorPortal() {
   const [error, setError] = useState('')
   const [flyer, setFlyer] = useState(null)
   const [flyerPreview, setFlyerPreview] = useState(null)
+  const [dragActive, setDragActive] = useState(false)
   const navigate = useNavigate()
 
   useEffect(() => {
@@ -102,7 +128,6 @@ export default function CuratorPortal() {
       .single()
     setCurator(data || null)
     if (data) {
-      // default to whichever portal they actually have access to
       if (!data.can_events && data.can_places) {
         setPortalTab('places')
       } else {
@@ -115,11 +140,38 @@ export default function CuratorPortal() {
   function handlePlaceChange(e) { setPlaceForm({ ...placeForm, [e.target.name]: e.target.value }) }
   function handleHappeningChange(e) { setHappeningForm({ ...happeningForm, [e.target.name]: e.target.value }) }
 
+  async function processFlyerFile(file) {
+    if (!file || !file.type.startsWith('image/')) return
+    try {
+      const resized = await resizeImage(file)
+      setFlyer(resized)
+      setFlyerPreview(URL.createObjectURL(resized))
+    } catch {
+      setFlyer(file)
+      setFlyerPreview(URL.createObjectURL(file))
+    }
+  }
+
   function handleFlyerChange(e) {
     const file = e.target.files[0]
-    if (!file) return
-    setFlyer(file)
-    setFlyerPreview(URL.createObjectURL(file))
+    processFlyerFile(file)
+  }
+
+  function handleDragOver(e) {
+    e.preventDefault()
+    setDragActive(true)
+  }
+
+  function handleDragLeave(e) {
+    e.preventDefault()
+    setDragActive(false)
+  }
+
+  function handleDrop(e) {
+    e.preventDefault()
+    setDragActive(false)
+    const file = e.dataTransfer.files?.[0]
+    processFlyerFile(file)
   }
 
   async function handleScan() {
@@ -160,16 +212,39 @@ export default function CuratorPortal() {
     }
   }
 
+  async function uploadFlyer() {
+    if (!flyer) return null
+    const fileName = `${Date.now()}-${flyer.name}`
+    const { error: uploadError } = await supabase.storage
+      .from('flyers')
+      .upload(fileName, flyer, { contentType: flyer.type })
+    if (uploadError) {
+      console.error(uploadError)
+      return null
+    }
+    const { data } = supabase.storage.from('flyers').getPublicUrl(fileName)
+    return data.publicUrl
+  }
+
   async function handleEventSubmit(e) {
     e.preventDefault()
     setSubmitting(true)
     setError('')
     setSuccess('')
+
+    const flyerUrl = await uploadFlyer()
+
     const { error } = await supabase.from('events').insert([{
       ...eventForm, curator_id: user.id, status: 'published',
+      flyer_url: flyerUrl,
     }])
     if (error) { setError('Something went wrong. Try again.') }
-    else { setSuccess('Event added to Get Lored.'); setEventForm(emptyEvent); setFlyer(null); setFlyerPreview(null) }
+    else {
+      setSuccess('Event added to Get Lored.')
+      setEventForm(emptyEvent)
+      setFlyer(null)
+      setFlyerPreview(null)
+    }
     setSubmitting(false)
   }
 
@@ -204,10 +279,8 @@ export default function CuratorPortal() {
     navigate('/')
   }
 
-  // Still loading
   if (curator === undefined) return null
 
-  // Not logged in
   if (!user) {
     return (
       <div style={s.gate}>
@@ -218,7 +291,6 @@ export default function CuratorPortal() {
     )
   }
 
-  // Logged in but not a curator
   if (!curator) {
     return (
       <div style={s.gate}>
@@ -231,7 +303,6 @@ export default function CuratorPortal() {
     )
   }
 
-  // Curator exists but not approved for anything yet
   if (!curator.can_events && !curator.can_places) {
     return (
       <div style={s.gate}>
@@ -244,7 +315,6 @@ export default function CuratorPortal() {
 
   const hasBoth = curator.can_events && curator.can_places
 
-  // Approved curator — show portal
   return (
     <main style={s.page}>
       <div style={s.topRow}>
@@ -285,12 +355,17 @@ export default function CuratorPortal() {
       {portalTab === 'events' && curator.can_events && (
         <>
           <h2 style={s.sectionTitle}>Upload flyer</h2>
-          <label style={s.flyerBox}>
+          <label
+            style={dragActive ? { ...s.flyerBox, ...s.flyerBoxActive } : s.flyerBox}
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
+            onDrop={handleDrop}
+          >
             {flyerPreview ? (
               <img src={flyerPreview} alt="Flyer preview" style={s.flyerPreview} />
             ) : (
               <>
-                <p style={s.flyerLabel}>Drop your flyer here or click to upload</p>
+                <p style={s.flyerLabel}>Drag & drop your flyer here, or click to upload</p>
                 <p style={s.flyerHint}>JPG or PNG</p>
               </>
             )}
@@ -399,9 +474,9 @@ export default function CuratorPortal() {
                 <label style={s.label}>Category</label>
                 <select style={s.select} name="category" value={placeForm.category} onChange={handlePlaceChange}>
                   <option value="restaurant">Restaurant</option>
+                  <option value="coffee">Coffee shop</option>
                   <option value="bar">Bar</option>
                   <option value="music_venue">Music venue</option>
-                  <option value="coffee">Coffee shop</option>
                   <option value="attraction">Attraction</option>
                 </select>
               </div>
