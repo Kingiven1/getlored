@@ -2,6 +2,7 @@ import { useParams, Link } from 'react-router-dom'
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase.js'
 import SignupGate from '../components/SignupGate.jsx'
+import DJCard from '../components/DJCard.jsx'
 
 const cityMeta = {
   'washington-dc': { name: 'Washington DC', country: 'USA' },
@@ -103,7 +104,13 @@ function PlaceCard({ place, locked, onLockedClick }) {
           )
         )}
         {place.google_maps_url && (
-          <a href={place.google_maps_url} target="_blank" rel="noopener noreferrer" style={s.tag}>View on Maps</a>
+          locked ? (
+            <button type="button" onClick={onLockedClick} style={{ ...s.tag, background: 'none', font: 'inherit', cursor: 'pointer' }}>
+              View on Maps
+            </button>
+          ) : (
+            <a href={place.google_maps_url} target="_blank" rel="noopener noreferrer" style={s.tag}>View on Maps</a>
+          )
         )}
       </div>
     </div>
@@ -141,6 +148,7 @@ export default function CityPage() {
   const [events, setEvents] = useState([])
   const [places, setPlaces] = useState([])
   const [happenings, setHappenings] = useState([])
+  const [djs, setDJs] = useState([])
   const [loading, setLoading] = useState(true)
   const [isLoggedIn, setIsLoggedIn] = useState(false)
   const [gateOpen, setGateOpen] = useState(false)
@@ -150,16 +158,18 @@ export default function CityPage() {
 
     async function load() {
       setLoading(true)
-      const [eventsRes, placesRes, happeningsRes, sessionRes] = await Promise.all([
+      const [eventsRes, placesRes, happeningsRes, djsRes, sessionRes] = await Promise.all([
         supabase.from('events').select('*').ilike('city', meta.name).eq('status', 'published').order('date', { ascending: true }),
         supabase.from('places').select('*').ilike('city', meta.name).order('created_at', { ascending: false }),
         supabase.from('happenings').select('*').ilike('city', meta.name).eq('status', 'published').order('date', { ascending: true }),
+        supabase.from('dj_curators').select('*').eq('city', meta.name),
         supabase.auth.getSession(),
       ])
       if (!active) return
       setEvents(eventsRes.data || [])
       setPlaces(placesRes.data || [])
       setHappenings(happeningsRes.data || [])
+      setDJs(djsRes.data || [])
       setIsLoggedIn(!!sessionRes.data.session)
       setLoading(false)
     }
@@ -247,6 +257,22 @@ export default function CityPage() {
             ))}
           </div>
         )
+      )}
+
+      {!loading && djs && djs.length > 0 && activeTab === 'events' && (
+        <section style={{ marginTop: '60px', paddingTop: '40px', borderTop: '1px solid #E8E4DE' }}>
+          <h2 style={{ ...s.headline, fontSize: '32px', marginBottom: '32px' }}>🎧 Curators</h2>
+          <div style={s.grid}>
+            {djs.map(dj => (
+              <DJCard
+                key={dj.id}
+                dj={dj}
+                locked={!isLoggedIn}
+                onLockedClick={openGate}
+              />
+            ))}
+          </div>
+        </section>
       )}
     </main>
   )
