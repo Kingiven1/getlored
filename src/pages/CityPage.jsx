@@ -31,6 +31,7 @@ const s = {
   cardSub: { fontFamily: "'DM Sans', sans-serif", fontSize: '13px', fontWeight: '300', color: '#6B6560', marginBottom: '16px' },
   tagRow: { display: 'flex', gap: '8px', flexWrap: 'wrap' },
   tag: { display: 'inline-block', fontFamily: "'DM Sans', sans-serif", fontSize: '10px', textTransform: 'uppercase', color: '#9B9590', border: '1px solid #D8D4CE', padding: '4px 10px', borderRadius: '2px', letterSpacing: '0.1em' },
+  instagramTag: { display: 'inline-block', fontFamily: "'DM Sans', sans-serif", fontSize: '10px', textTransform: 'uppercase', color: '#B07D62', border: '1px solid #E8D5C4', backgroundColor: '#FDF8F5', padding: '4px 10px', borderRadius: '2px', letterSpacing: '0.1em' },
   styleTag: { display: 'inline-block', fontFamily: "'DM Sans', sans-serif", fontSize: '10px', textTransform: 'uppercase', color: '#B07D62', border: '1px solid #E8D5C4', backgroundColor: '#FDF8F5', padding: '4px 10px', borderRadius: '2px', letterSpacing: '0.1em' },
   empty: { fontFamily: "'Cormorant Garamond', serif", fontSize: '24px', fontStyle: 'italic', color: '#9B9590', textAlign: 'center', padding: '80px 0' },
   loading: { fontFamily: "'DM Sans', sans-serif", fontSize: '13px', color: '#9B9590', textAlign: 'center', padding: '80px 0' },
@@ -39,6 +40,11 @@ const s = {
 function formatCategory(category) {
   if (!category) return ''
   return category.replace(/_/g, ' ')
+}
+
+function isInstagramUrl(url) {
+  if (!url) return false
+  return url.toLowerCase().includes('instagram.com')
 }
 
 function EventCard({ event, locked, onLockedClick }) {
@@ -76,6 +82,9 @@ function EventCard({ event, locked, onLockedClick }) {
 
 function PlaceCard({ place, locked, onLockedClick }) {
   const topLabel = place.dining_style || formatCategory(place.category)
+  const websiteIsInstagram = isInstagramUrl(place.website)
+  const websiteLabel = websiteIsInstagram ? 'Instagram' : 'Website'
+  const websiteTagStyle = websiteIsInstagram ? s.instagramTag : s.tag
 
   return (
     <div style={s.card}>
@@ -86,11 +95,11 @@ function PlaceCard({ place, locked, onLockedClick }) {
         {place.dining_style && <span style={s.styleTag}>{place.dining_style}</span>}
         {place.website && (
           locked ? (
-            <button type="button" onClick={onLockedClick} style={{ ...s.tag, border: '1px solid #D8D4CE', background: 'none', font: 'inherit' }}>
-              Website
+            <button type="button" onClick={onLockedClick} style={{ ...websiteTagStyle, background: websiteIsInstagram ? '#FDF8F5' : 'none', font: 'inherit' }}>
+              {websiteLabel}
             </button>
           ) : (
-            <a href={place.website} target="_blank" rel="noopener noreferrer" style={s.tag}>Website</a>
+            <a href={place.website} target="_blank" rel="noopener noreferrer" style={websiteTagStyle}>{websiteLabel}</a>
           )
         )}
         {place.google_maps_url && (
