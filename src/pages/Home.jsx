@@ -35,7 +35,8 @@ const styles = {
   djsLabel: { fontFamily: "'DM Sans', sans-serif", fontSize: '11px', fontWeight: '500', letterSpacing: '0.12em', textTransform: 'uppercase', color: '#B07D62', marginBottom: '40px', textAlign: 'center' },
   djsHeadline: { fontFamily: "'Cormorant Garamond', serif", fontSize: '48px', fontWeight: '500', color: '#1A1A1A', marginBottom: '16px', textAlign: 'center' },
   djsDesc: { fontFamily: "'DM Sans', sans-serif", fontSize: '14px', color: '#666', marginBottom: '40px', textAlign: 'center', maxWidth: '600px', margin: '0 auto 40px' },
-  djsGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '20px' },
+  djsGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '20px' },
+  djCity: { fontFamily: "'DM Sans', sans-serif", fontSize: '11px', textTransform: 'uppercase', color: '#9B9590', letterSpacing: '0.08em', marginBottom: '2px' },
   bottomSection: { padding: '80px 32px', maxWidth: '800px', margin: '0 auto', textAlign: 'center' },
   bottomHeadline: { fontFamily: "'Cormorant Garamond', serif", fontSize: 'clamp(32px, 5vw, 52px)', fontWeight: '500', fontStyle: 'italic', color: '#1A1A1A', marginBottom: '16px' },
   bottomSub: { fontFamily: "'DM Sans', sans-serif", fontSize: '15px', fontWeight: '300', color: '#6B6560', marginBottom: '32px' },
@@ -48,7 +49,6 @@ export default function Home() {
   const [loadingDJs, setLoadingDJs] = useState(true)
 
   useEffect(() => {
-    // Check auth
     const checkAuth = async () => {
       const { data: { session } } = await supabase.auth.getSession()
       setIsLoggedIn(!!session)
@@ -63,14 +63,14 @@ export default function Home() {
   }, [])
 
   useEffect(() => {
-    // Fetch featured DJs
     const fetchDJs = async () => {
       setLoadingDJs(true)
       const { data, error } = await supabase
         .from('dj_curators')
         .select('*')
-        .limit(8)
-      
+        .eq('is_featured', true)
+        .order('city', { ascending: true })
+
       if (!error) {
         setFeaturedDJs(data || [])
       }
@@ -120,18 +120,21 @@ export default function Home() {
       {!loadingDJs && featuredDJs.length > 0 && (
         <section style={styles.djsSection}>
           <p style={styles.djsLabel}>🎧 Meet the curators</p>
-          <h2 style={styles.djsHeadline}>Discover the Scene</h2>
+          <h2 style={styles.djsHeadline}>One per city</h2>
           <p style={styles.djsDesc}>
-            The DJs shaping culture across our cities
+            The tastemakers curating culture across our cities
           </p>
           <div style={styles.djsGrid}>
             {featuredDJs.map(dj => (
-              <DJCard
-                key={dj.id}
-                dj={dj}
-                locked={!isLoggedIn}
-                onLockedClick={() => setGateOpen(true)}
-              />
+              <div key={dj.id}>
+                <p style={styles.djCity}>{dj.city}</p>
+                <DJCard
+                  dj={dj}
+                  locked={!isLoggedIn}
+                  onLockedClick={() => setGateOpen(true)}
+                  showGenres={false}
+                />
+              </div>
             ))}
           </div>
         </section>

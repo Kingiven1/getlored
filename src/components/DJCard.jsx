@@ -1,6 +1,6 @@
 import React from 'react'
 
-export default function DJCard({ dj, locked = false, onLockedClick }) {
+export default function DJCard({ dj, locked = false, onLockedClick, showGenres = false }) {
   const instagramUrl = dj.instagram_handle?.startsWith('http')
     ? dj.instagram_handle
     : `https://instagram.com/${dj.instagram_handle?.replace('@', '')}`
@@ -24,6 +24,22 @@ export default function DJCard({ dj, locked = false, onLockedClick }) {
       color: '#666',
       margin: '0 0 12px 0',
       fontStyle: 'italic',
+    },
+    genreRow: {
+      display: 'flex',
+      flexWrap: 'wrap',
+      gap: '6px',
+      marginBottom: '12px',
+    },
+    genreTag: {
+      fontSize: '10px',
+      textTransform: 'uppercase',
+      letterSpacing: '0.06em',
+      color: '#B07D62',
+      border: '1px solid #E8D5C4',
+      backgroundColor: '#FDF8F5',
+      padding: '4px 8px',
+      borderRadius: '2px',
     },
     instagramBtn: {
       padding: '8px 12px',
@@ -54,6 +70,15 @@ export default function DJCard({ dj, locked = false, onLockedClick }) {
     <div style={s.card}>
       <p style={s.name}>{dj.name}</p>
       <p style={s.event}>🎵 {dj.event_name}</p>
+
+      {showGenres && dj.genres && dj.genres.length > 0 && (
+        <div style={s.genreRow}>
+          {dj.genres.map((genre, i) => (
+            <span key={i} style={s.genreTag}>{genre}</span>
+          ))}
+        </div>
+      )}
+
       {dj.instagram_handle && (
         locked ? (
           <button type="button" onClick={onLockedClick} style={s.lockedBtn}>

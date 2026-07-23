@@ -177,8 +177,6 @@ export default function CityPage() {
       setDJs(djsRes.data || [])
       setIsLoggedIn(!!sessionRes.data.session)
       setLoading(false)
-
-      console.log('DJ DEBUG:', { city: meta.name, djsFound: djsRes.data?.length, djsError: djsRes.error })
     }
 
     load()
@@ -266,21 +264,20 @@ export default function CityPage() {
         )
       )}
 
-      {!loading && (
+      {!loading && djs.length > 0 && (
         <section style={s.djSection}>
-          <h2 style={s.djHeadline}>🎧 Curators {djs.length === 0 ? '(none found for this city)' : ''}</h2>
-          {djs.length > 0 && (
-            <div style={s.grid}>
-              {djs.map(dj => (
-                <DJCard
-                  key={dj.id}
-                  dj={dj}
-                  locked={!isLoggedIn}
-                  onLockedClick={openGate}
-                />
-              ))}
-            </div>
-          )}
+          <h2 style={s.djHeadline}>🎧 Curators</h2>
+          <div style={s.grid}>
+            {djs.map(dj => (
+              <DJCard
+                key={dj.id}
+                dj={dj}
+                locked={!isLoggedIn}
+                onLockedClick={openGate}
+                showGenres={true}
+              />
+            ))}
+          </div>
         </section>
       )}
     </main>
