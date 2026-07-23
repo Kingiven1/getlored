@@ -13,6 +13,7 @@ const cities = [
   { name: 'Panama City', country: 'Panama', slug: 'panama-city' },
   { name: 'Lisbon', country: 'Portugal', slug: 'lisbon' },
   { name: 'Amsterdam', country: 'Netherlands', slug: 'amsterdam' },
+  { name: 'Rio de Janeiro', country: 'Brazil', slug: 'rio-de-janeiro' },
 ]
 
 function slugForCity(cityName) {

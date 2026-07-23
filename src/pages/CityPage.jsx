@@ -13,6 +13,7 @@ const cityMeta = {
   'panama-city': { name: 'Panama City', country: 'Panama' },
   'lisbon': { name: 'Lisbon', country: 'Portugal' },
   'amsterdam': { name: 'Amsterdam', country: 'Netherlands' },
+  'rio-de-janeiro': { name: 'Rio de Janeiro', country: 'Brazil' },
 }
 
 const BAR_CATEGORIES = ['bar', 'music_venue']
