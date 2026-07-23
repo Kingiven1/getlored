@@ -71,7 +71,7 @@ export default function DJCard({ dj, locked = false, onLockedClick, showGenres =
       <p style={s.name}>{dj.name}</p>
       <p style={s.event}>🎵 {dj.event_name}</p>
 
-      {showGenres && dj.genres && dj.genres.length > 0 && (
+      {showGenres && Array.isArray(dj.genres) && dj.genres.length > 0 && (
         <div style={s.genreRow}>
           {dj.genres.map((genre, i) => (
             <span key={i} style={s.genreTag}>{genre}</span>
