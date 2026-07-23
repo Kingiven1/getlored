@@ -5,6 +5,8 @@ export default function DJCard({ dj, locked = false, onLockedClick, showGenres =
     ? dj.instagram_handle
     : `https://instagram.com/${dj.instagram_handle?.replace('@', '')}`
 
+  const hasGenres = showGenres && Array.isArray(dj.genres) && dj.genres.length > 0
+
   const s = {
     card: {
       borderRadius: '12px',
@@ -71,7 +73,7 @@ export default function DJCard({ dj, locked = false, onLockedClick, showGenres =
       <p style={s.name}>{dj.name}</p>
       <p style={s.event}>🎵 {dj.event_name}</p>
 
-      {showGenres && Array.isArray(dj.genres) && dj.genres.length > 0 && (
+      {hasGenres && (
         <div style={s.genreRow}>
           {dj.genres.map((genre, i) => (
             <span key={i} style={s.genreTag}>{genre}</span>
