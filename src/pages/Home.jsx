@@ -1,4 +1,8 @@
 import { Link } from 'react-router-dom'
+import { useState, useEffect } from 'react'
+import { supabase } from '../lib/supabase.js'
+import DJCard from '../components/DJCard.jsx'
+import SignupGate from '../components/SignupGate.jsx'
 
 const cities = [
   { name: 'Washington DC', country: 'USA', slug: 'washington-dc' },
@@ -27,14 +31,59 @@ const styles = {
   cityCard: { backgroundColor: '#F2EEE9', padding: '32px 28px', cursor: 'pointer', transition: 'background 0.2s', display: 'block' },
   cityName: { fontFamily: "'Cormorant Garamond', serif", fontSize: '28px', fontWeight: '500', color: '#1A1A1A', marginBottom: '4px' },
   cityCountry: { fontFamily: "'DM Sans', sans-serif", fontSize: '12px', fontWeight: '400', letterSpacing: '0.08em', textTransform: 'uppercase', color: '#9B9590' },
+  djsSection: { padding: '80px 32px', maxWidth: '1100px', margin: '0 auto', backgroundColor: '#F8F6F3' },
+  djsLabel: { fontFamily: "'DM Sans', sans-serif", fontSize: '11px', fontWeight: '500', letterSpacing: '0.12em', textTransform: 'uppercase', color: '#B07D62', marginBottom: '40px', textAlign: 'center' },
+  djsHeadline: { fontFamily: "'Cormorant Garamond', serif", fontSize: '48px', fontWeight: '500', color: '#1A1A1A', marginBottom: '16px', textAlign: 'center' },
+  djsDesc: { fontFamily: "'DM Sans', sans-serif", fontSize: '14px', color: '#666', marginBottom: '40px', textAlign: 'center', maxWidth: '600px', margin: '0 auto 40px' },
+  djsGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '20px' },
   bottomSection: { padding: '80px 32px', maxWidth: '800px', margin: '0 auto', textAlign: 'center' },
   bottomHeadline: { fontFamily: "'Cormorant Garamond', serif", fontSize: 'clamp(32px, 5vw, 52px)', fontWeight: '500', fontStyle: 'italic', color: '#1A1A1A', marginBottom: '16px' },
   bottomSub: { fontFamily: "'DM Sans', sans-serif", fontSize: '15px', fontWeight: '300', color: '#6B6560', marginBottom: '32px' },
 }
 
 export default function Home() {
+  const [isLoggedIn, setIsLoggedIn] = useState(false)
+  const [gateOpen, setGateOpen] = useState(false)
+  const [featuredDJs, setFeaturedDJs] = useState([])
+  const [loadingDJs, setLoadingDJs] = useState(true)
+
+  useEffect(() => {
+    // Check auth
+    const checkAuth = async () => {
+      const { data: { session } } = await supabase.auth.getSession()
+      setIsLoggedIn(!!session)
+    }
+    checkAuth()
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setIsLoggedIn(!!session)
+    })
+
+    return () => subscription?.unsubscribe()
+  }, [])
+
+  useEffect(() => {
+    // Fetch featured DJs
+    const fetchDJs = async () => {
+      setLoadingDJs(true)
+      const { data, error } = await supabase
+        .from('dj_curators')
+        .select('*')
+        .limit(8)
+      
+      if (!error) {
+        setFeaturedDJs(data || [])
+      }
+      setLoadingDJs(false)
+    }
+
+    fetchDJs()
+  }, [])
+
   return (
     <main>
+      {gateOpen && <SignupGate onClose={() => setGateOpen(false)} />}
+
       <section style={styles.hero}>
         <p style={styles.eyebrow}>Curated by people in the scene</p>
         <h1 style={styles.headline}>
@@ -65,6 +114,28 @@ export default function Home() {
           ))}
         </div>
       </section>
+
+      <div style={styles.divider} />
+
+      {!loadingDJs && featuredDJs.length > 0 && (
+        <section style={styles.djsSection}>
+          <p style={styles.djsLabel}>🎧 Meet the curators</p>
+          <h2 style={styles.djsHeadline}>Discover the Scene</h2>
+          <p style={styles.djsDesc}>
+            The DJs shaping culture across our cities
+          </p>
+          <div style={styles.djsGrid}>
+            {featuredDJs.map(dj => (
+              <DJCard
+                key={dj.id}
+                dj={dj}
+                locked={!isLoggedIn}
+                onLockedClick={() => setGateOpen(true)}
+              />
+            ))}
+          </div>
+        </section>
+      )}
 
       <div style={styles.divider} />
 
