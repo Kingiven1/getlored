@@ -1,8 +1,8 @@
 import React from 'react'
 
 export default function DJCard({ dj, locked = false, onLockedClick }) {
-  const instagramUrl = dj.instagram_handle?.startsWith('http') 
-    ? dj.instagram_handle 
+  const instagramUrl = dj.instagram_handle?.startsWith('http')
+    ? dj.instagram_handle
     : `https://instagram.com/${dj.instagram_handle?.replace('@', '')}`
 
   const s = {
@@ -36,7 +36,6 @@ export default function DJCard({ dj, locked = false, onLockedClick }) {
       color: '#d04040',
       textDecoration: 'none',
       display: 'inline-block',
-      transition: 'all 0.2s ease',
     },
     lockedBtn: {
       padding: '8px 12px',
@@ -57,20 +56,11 @@ export default function DJCard({ dj, locked = false, onLockedClick }) {
       <p style={s.event}>🎵 {dj.event_name}</p>
       {dj.instagram_handle && (
         locked ? (
-          <button
-            type="button"
-            onClick={onLockedClick}
-            style={s.lockedBtn}
-          >
+          <button type="button" onClick={onLockedClick} style={s.lockedBtn}>
             🔒 Follow
           </button>
         ) : (
-          <a
-            href={instagramUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            style={s.instagramBtn}
-          >
+          <a href={instagramUrl} target="_blank" rel="noopener noreferrer" style={s.instagramBtn}>
             📸 Instagram
           </a>
         )
