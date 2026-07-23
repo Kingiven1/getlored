@@ -158,6 +158,8 @@ export default function CityPage() {
 
     async function load() {
       setLoading(true)
+      
+      // Fetch all data in parallel
       const [eventsRes, placesRes, happeningsRes, djsRes, sessionRes] = await Promise.all([
         supabase.from('events').select('*').ilike('city', meta.name).eq('status', 'published').order('date', { ascending: true }),
         supabase.from('places').select('*').ilike('city', meta.name).order('created_at', { ascending: false }),
@@ -165,7 +167,9 @@ export default function CityPage() {
         supabase.from('dj_curators').select('*').eq('city', meta.name),
         supabase.auth.getSession(),
       ])
+
       if (!active) return
+
       setEvents(eventsRes.data || [])
       setPlaces(placesRes.data || [])
       setHappenings(happeningsRes.data || [])
@@ -184,7 +188,7 @@ export default function CityPage() {
       active = false
       subscription.unsubscribe()
     }
-  }, [city])
+  }, [city, meta.name])
 
   function openGate() {
     setGateOpen(true)
@@ -224,15 +228,33 @@ export default function CityPage() {
       {loading && <p style={s.loading}>Loading the lore...</p>}
 
       {!loading && activeTab === 'events' && (
-        events.length === 0 ? (
-          <p style={s.empty}>No events yet.</p>
-        ) : (
-          <div style={s.grid}>
-            {events.map(e => (
-              <EventCard key={e.id} event={e} locked={!isLoggedIn} onLockedClick={openGate} />
-            ))}
-          </div>
-        )
+        <>
+          {events.length === 0 ? (
+            <p style={s.empty}>No events yet.</p>
+          ) : (
+            <div style={s.grid}>
+              {events.map(e => (
+                <EventCard key={e.id} event={e} locked={!isLoggedIn} onLockedClick={openGate} />
+              ))}
+            </div>
+          )}
+
+          {djs && djs.length > 0 && (
+            <section style={{ marginTop: '60px', paddingTop: '40px', borderTop: '1px solid #E8E4DE' }}>
+              <h2 style={{ ...s.headline, fontSize: '32px', marginBottom: '32px' }}>🎧 Curators</h2>
+              <div style={s.grid}>
+                {djs.map(dj => (
+                  <DJCard
+                    key={dj.id}
+                    dj={dj}
+                    locked={!isLoggedIn}
+                    onLockedClick={openGate}
+                  />
+                ))}
+              </div>
+            </section>
+          )}
+        </>
       )}
 
       {!loading && activeTab === 'happenings' && (
@@ -257,22 +279,6 @@ export default function CityPage() {
             ))}
           </div>
         )
-      )}
-
-      {!loading && djs && djs.length > 0 && activeTab === 'events' && (
-        <section style={{ marginTop: '60px', paddingTop: '40px', borderTop: '1px solid #E8E4DE' }}>
-          <h2 style={{ ...s.headline, fontSize: '32px', marginBottom: '32px' }}>🎧 Curators</h2>
-          <div style={s.grid}>
-            {djs.map(dj => (
-              <DJCard
-                key={dj.id}
-                dj={dj}
-                locked={!isLoggedIn}
-                onLockedClick={openGate}
-              />
-            ))}
-          </div>
-        </section>
       )}
     </main>
   )
