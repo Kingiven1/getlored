@@ -1,6 +1,6 @@
 import React from 'react'
 
-export default function DJCard({ dj, locked = false, onLockedClick, showGenres = false }) {
+export default function DJCard({ dj, locked = false, onLockedClick, showGenres = false, saved = false, onToggleSave }) {
   const instagramUrl = dj.instagram_handle?.startsWith('http')
     ? dj.instagram_handle
     : `https://instagram.com/${dj.instagram_handle?.replace('@', '')}`
@@ -43,6 +43,33 @@ export default function DJCard({ dj, locked = false, onLockedClick, showGenres =
       padding: '4px 8px',
       borderRadius: '2px',
     },
+    actionRow: {
+      display: 'flex',
+      flexWrap: 'wrap',
+      gap: '8px',
+    },
+    saveBtn: {
+      padding: '8px 12px',
+      borderRadius: '6px',
+      backgroundColor: 'transparent',
+      border: '1px solid #1a1a1a',
+      cursor: 'pointer',
+      fontSize: '13px',
+      fontWeight: '500',
+      color: '#1a1a1a',
+      fontFamily: 'inherit',
+    },
+    savedBtn: {
+      padding: '8px 12px',
+      borderRadius: '6px',
+      backgroundColor: '#1a1a1a',
+      border: '1px solid #1a1a1a',
+      cursor: 'pointer',
+      fontSize: '13px',
+      fontWeight: '500',
+      color: '#FAF8F5',
+      fontFamily: 'inherit',
+    },
     instagramBtn: {
       padding: '8px 12px',
       borderRadius: '6px',
@@ -81,17 +108,27 @@ export default function DJCard({ dj, locked = false, onLockedClick, showGenres =
         </div>
       )}
 
-      {dj.instagram_handle && (
-        locked ? (
-          <button type="button" onClick={onLockedClick} style={s.lockedBtn}>
-            🔒 Follow
-          </button>
-        ) : (
-          <a href={instagramUrl} target="_blank" rel="noopener noreferrer" style={s.instagramBtn}>
-            📸 Instagram
-          </a>
-        )
-      )}
+      <div style={s.actionRow}>
+        <button
+          type="button"
+          onClick={locked ? onLockedClick : () => onToggleSave(dj)}
+          style={saved ? s.savedBtn : s.saveBtn}
+        >
+          {saved ? 'Saved ✓' : 'Save'}
+        </button>
+
+        {dj.instagram_handle && (
+          locked ? (
+            <button type="button" onClick={onLockedClick} style={s.lockedBtn}>
+              🔒 Follow
+            </button>
+          ) : (
+            <a href={instagramUrl} target="_blank" rel="noopener noreferrer" style={s.instagramBtn}>
+              📸 Instagram
+            </a>
+          )
+        )}
+      </div>
     </div>
   )
 }

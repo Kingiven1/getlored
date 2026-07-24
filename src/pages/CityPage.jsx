@@ -183,6 +183,7 @@ export default function CityPage() {
   const [isLoggedIn, setIsLoggedIn] = useState(false)
   const [userId, setUserId] = useState(null)
   const [savedPlaceIds, setSavedPlaceIds] = useState(new Set())
+  const [savedDjIds, setSavedDjIds] = useState(new Set())
   const [gateOpen, setGateOpen] = useState(false)
 
   useEffect(() => {
@@ -211,12 +212,13 @@ export default function CityPage() {
       setUserId(sessionUser?.id || null)
 
       if (sessionUser) {
-        const savedRes = await supabase
-          .from('saved_places')
-          .select('place_id')
-          .eq('user_id', sessionUser.id)
+        const [savedPlacesRes, savedDjsRes] = await Promise.all([
+          supabase.from('saved_places').select('place_id').eq('user_id', sessionUser.id),
+          supabase.from('saved_djs').select('dj_id').eq('user_id', sessionUser.id),
+        ])
         if (active) {
-          setSavedPlaceIds(new Set((savedRes.data || []).map(r => r.place_id)))
+          setSavedPlaceIds(new Set((savedPlacesRes.data || []).map(r => r.place_id)))
+          setSavedDjIds(new Set((savedDjsRes.data || []).map(r => r.dj_id)))
         }
       }
 
@@ -260,10 +262,34 @@ export default function CityPage() {
       setSavedPlaceIds(prev => new Set(prev).add(place.id))
       const { error } = await supabase.from('saved_places').insert([{ user_id: userId, place_id: place.id }])
       if (error) {
-        // Roll back on failure (e.g. duplicate or network issue)
         setSavedPlaceIds(prev => {
           const next = new Set(prev)
           next.delete(place.id)
+          return next
+        })
+      }
+    }
+  }
+
+  async function handleToggleSaveDj(dj) {
+    if (!userId) return
+
+    const alreadySaved = savedDjIds.has(dj.id)
+
+    if (alreadySaved) {
+      setSavedDjIds(prev => {
+        const next = new Set(prev)
+        next.delete(dj.id)
+        return next
+      })
+      await supabase.from('saved_djs').delete().eq('user_id', userId).eq('dj_id', dj.id)
+    } else {
+      setSavedDjIds(prev => new Set(prev).add(dj.id))
+      const { error } = await supabase.from('saved_djs').insert([{ user_id: userId, dj_id: dj.id }])
+      if (error) {
+        setSavedDjIds(prev => {
+          const next = new Set(prev)
+          next.delete(dj.id)
           return next
         })
       }
@@ -353,6 +379,8 @@ export default function CityPage() {
                 locked={!isLoggedIn}
                 onLockedClick={openGate}
                 showGenres={true}
+                saved={savedDjIds.has(dj.id)}
+                onToggleSave={handleToggleSaveDj}
               />
             ))}
           </div>
