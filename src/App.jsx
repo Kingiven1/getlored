@@ -1,4 +1,5 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
+import { Analytics } from '@vercel/analytics/react'
 import Navbar from './components/Navbar.jsx'
 import Home from './pages/Home.jsx'
 import Cities from './pages/Cities.jsx'
@@ -38,6 +39,7 @@ export default function App() {
           <Route path="/privacy" element={<PrivacyPolicy />} />
           <Route path="/terms" element={<TermsOfService />} />
         </Routes>
+        <Analytics />
       </div>
     </BrowserRouter>
   )
