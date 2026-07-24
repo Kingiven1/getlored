@@ -98,6 +98,7 @@ export default function Navbar() {
           <Link to="/cities" style={isActive('/cities') ? {...s.link, ...s.active} : s.link}>Cities</Link>
           {user ? (
             <>
+              <Link to="/itinerary" style={isActive('/itinerary') ? {...s.link, ...s.active} : s.link}>Itinerary</Link>
               {isApprovedCurator && (
                 <Link to="/curator" style={isActive('/curator') ? {...s.link, ...s.active} : s.link}>Portal</Link>
               )}
@@ -136,6 +137,7 @@ export default function Navbar() {
           <Link to="/cities" style={isActive('/cities') ? {...s.mobileLink, ...s.mobileActive} : s.mobileLink}>Cities</Link>
           {user ? (
             <>
+              <Link to="/itinerary" style={isActive('/itinerary') ? {...s.mobileLink, ...s.mobileActive} : s.mobileLink}>Itinerary</Link>
               {isApprovedCurator && (
                 <Link to="/curator" style={isActive('/curator') ? {...s.mobileLink, ...s.mobileActive} : s.mobileLink}>Portal</Link>
               )}

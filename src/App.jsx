@@ -11,6 +11,7 @@ import CuratorLogin from './pages/CuratorLogin.jsx'
 import RequestAccess from './pages/RequestAccess.jsx'
 import CuratorPortal from './pages/CuratorPortal.jsx'
 import Admin from './pages/Admin.jsx'
+import MyItinerary from './pages/MyItinerary.jsx'
 import PrivacyPolicy from './pages/PrivacyPolicy.jsx'
 import TermsOfService from './pages/TermsOfService.jsx'
 
@@ -66,6 +67,7 @@ return (
 <Route path="/request-access" element={<RequestAccess />} />
 <Route path="/curator" element={<CuratorPortal />} />
 <Route path="/control-panel" element={<Admin />} />
+<Route path="/itinerary" element={<MyItinerary />} />
 <Route path="/privacy" element={<PrivacyPolicy />} />
 <Route path="/terms" element={<TermsOfService />} />
 </Routes>

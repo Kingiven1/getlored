@@ -35,6 +35,8 @@ const s = {
   tag: { display: 'inline-block', fontFamily: "'DM Sans', sans-serif", fontSize: '9px', fontWeight: '500', textTransform: 'uppercase', color: '#9B9590', border: '1px solid #D8D4CE', padding: '3px 8px', borderRadius: '2px', letterSpacing: '0.08em', lineHeight: '1.3' },
   instagramTag: { display: 'inline-block', fontFamily: "'DM Sans', sans-serif", fontSize: '9px', fontWeight: '500', textTransform: 'uppercase', color: '#B07D62', border: '1px solid #E8D5C4', backgroundColor: '#FDF8F5', padding: '3px 8px', borderRadius: '2px', letterSpacing: '0.08em', lineHeight: '1.3' },
   styleTag: { display: 'inline-block', fontFamily: "'DM Sans', sans-serif", fontSize: '9px', fontWeight: '500', textTransform: 'uppercase', color: '#B07D62', border: '1px solid #E8D5C4', backgroundColor: '#FDF8F5', padding: '3px 8px', borderRadius: '2px', letterSpacing: '0.08em', lineHeight: '1.3' },
+  saveTag: { display: 'inline-block', fontFamily: "'DM Sans', sans-serif", fontSize: '9px', fontWeight: '500', textTransform: 'uppercase', color: '#1A1A1A', border: '1px solid #1A1A1A', backgroundColor: 'transparent', padding: '3px 8px', borderRadius: '2px', letterSpacing: '0.08em', lineHeight: '1.3', cursor: 'pointer', font: 'inherit' },
+  savedTag: { display: 'inline-block', fontFamily: "'DM Sans', sans-serif", fontSize: '9px', fontWeight: '500', textTransform: 'uppercase', color: '#FAF8F5', border: '1px solid #1A1A1A', backgroundColor: '#1A1A1A', padding: '3px 8px', borderRadius: '2px', letterSpacing: '0.08em', lineHeight: '1.3', cursor: 'pointer', font: 'inherit' },
   empty: { fontFamily: "'Cormorant Garamond', serif", fontSize: '24px', fontStyle: 'italic', color: '#9B9590', textAlign: 'center', padding: '80px 0' },
   loading: { fontFamily: "'DM Sans', sans-serif", fontSize: '13px', color: '#9B9590', textAlign: 'center', padding: '80px 0' },
   djSection: { marginTop: '60px', paddingTop: '40px', borderTop: '1px solid #E8E4DE' },
@@ -102,7 +104,7 @@ function EventCard({ event, locked, onLockedClick }) {
   )
 }
 
-function PlaceCard({ place, locked, onLockedClick }) {
+function PlaceCard({ place, locked, onLockedClick, saved, onToggleSave }) {
   const topLabel = place.dining_style || formatCategory(place.category)
   const websiteIsInstagram = isInstagramUrl(place.website)
   const websiteLabel = websiteIsInstagram ? 'Instagram' : 'Website'
@@ -114,6 +116,13 @@ function PlaceCard({ place, locked, onLockedClick }) {
       <h2 style={s.cardTitle}>{place.name}</h2>
       <p style={s.cardSub}>{place.address}</p>
       <div style={s.tagRow}>
+        <button
+          type="button"
+          onClick={locked ? onLockedClick : () => onToggleSave(place)}
+          style={saved ? s.savedTag : s.saveTag}
+        >
+          {saved ? 'Saved ✓' : 'Save'}
+        </button>
         {place.dining_style && <span style={s.styleTag}>{place.dining_style}</span>}
         {place.website && (
           locked ? (
@@ -172,6 +181,8 @@ export default function CityPage() {
   const [djs, setDJs] = useState([])
   const [loading, setLoading] = useState(true)
   const [isLoggedIn, setIsLoggedIn] = useState(false)
+  const [userId, setUserId] = useState(null)
+  const [savedPlaceIds, setSavedPlaceIds] = useState(new Set())
   const [gateOpen, setGateOpen] = useState(false)
 
   useEffect(() => {
@@ -194,7 +205,21 @@ export default function CityPage() {
       setPlaces(placesRes.data || [])
       setHappenings(happeningsRes.data || [])
       setDJs(djsRes.data || [])
-      setIsLoggedIn(!!sessionRes.data.session)
+
+      const sessionUser = sessionRes.data.session?.user
+      setIsLoggedIn(!!sessionUser)
+      setUserId(sessionUser?.id || null)
+
+      if (sessionUser) {
+        const savedRes = await supabase
+          .from('saved_places')
+          .select('place_id')
+          .eq('user_id', sessionUser.id)
+        if (active) {
+          setSavedPlaceIds(new Set((savedRes.data || []).map(r => r.place_id)))
+        }
+      }
+
       setLoading(false)
     }
 
@@ -202,6 +227,7 @@ export default function CityPage() {
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setIsLoggedIn(!!session)
+      setUserId(session?.user?.id || null)
     })
 
     return () => {
@@ -216,6 +242,32 @@ export default function CityPage() {
 
   function closeGate() {
     setGateOpen(false)
+  }
+
+  async function handleToggleSave(place) {
+    if (!userId) return
+
+    const alreadySaved = savedPlaceIds.has(place.id)
+
+    if (alreadySaved) {
+      setSavedPlaceIds(prev => {
+        const next = new Set(prev)
+        next.delete(place.id)
+        return next
+      })
+      await supabase.from('saved_places').delete().eq('user_id', userId).eq('place_id', place.id)
+    } else {
+      setSavedPlaceIds(prev => new Set(prev).add(place.id))
+      const { error } = await supabase.from('saved_places').insert([{ user_id: userId, place_id: place.id }])
+      if (error) {
+        // Roll back on failure (e.g. duplicate or network issue)
+        setSavedPlaceIds(prev => {
+          const next = new Set(prev)
+          next.delete(place.id)
+          return next
+        })
+      }
+    }
   }
 
   const placeFilter = places.filter(p => {
@@ -277,7 +329,14 @@ export default function CityPage() {
         ) : (
           <div style={s.grid}>
             {placeFilter.map(p => (
-              <PlaceCard key={p.id} place={p} locked={!isLoggedIn} onLockedClick={openGate} />
+              <PlaceCard
+                key={p.id}
+                place={p}
+                locked={!isLoggedIn}
+                onLockedClick={openGate}
+                saved={savedPlaceIds.has(p.id)}
+                onToggleSave={handleToggleSave}
+              />
             ))}
           </div>
         )
