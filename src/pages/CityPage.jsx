@@ -23,7 +23,11 @@ const s = {
   back: { fontFamily: "'DM Sans', sans-serif", fontSize: '12px', textTransform: 'uppercase', color: '#9B9590', marginBottom: '40px', display: 'inline-block', letterSpacing: '0.08em' },
   headline: { fontFamily: "'Cormorant Garamond', serif", fontSize: 'clamp(48px, 7vw, 80px)', fontWeight: '500', color: '#1A1A1A', marginBottom: '8px' },
   country: { fontFamily: "'DM Sans', sans-serif", fontSize: '12px', textTransform: 'uppercase', color: '#B07D62', letterSpacing: '0.1em' },
-  tabs: { display: 'flex', borderBottom: '1px solid #E8E4DE', marginBottom: '48px', marginTop: '48px', flexWrap: 'wrap' },
+  howToBar: { display: 'flex', flexWrap: 'wrap', gap: '24px', alignItems: 'center', backgroundColor: '#F2EEE9', padding: '16px 24px', marginTop: '32px' },
+  howToItem: { display: 'flex', alignItems: 'center', gap: '8px', fontFamily: "'DM Sans', sans-serif", fontSize: '12px', fontWeight: '300', color: '#6B6560' },
+  howToNum: { fontFamily: "'Cormorant Garamond', serif", fontStyle: 'italic', fontSize: '16px', color: '#B07D62' },
+  howToLink: { color: '#1A1A1A', fontWeight: '500', borderBottom: '1px solid #1A1A1A' },
+  tabs: { display: 'flex', borderBottom: '1px solid #E8E4DE', marginBottom: '48px', marginTop: '32px', flexWrap: 'wrap' },
   tab: { fontFamily: "'DM Sans', sans-serif", fontSize: '12px', textTransform: 'uppercase', color: '#9B9590', padding: '12px 24px', cursor: 'pointer', border: 'none', background: 'none', borderBottom: '2px solid transparent', marginBottom: '-1px', letterSpacing: '0.08em' },
   tabActive: { color: '#1A1A1A', borderBottom: '2px solid #1A1A1A' },
   grid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '2px' },
@@ -309,6 +313,15 @@ export default function CityPage() {
       <Link to="/cities" style={s.back}>All cities</Link>
       <h1 style={s.headline}>{meta.name}</h1>
       <p style={s.country}>{meta.country}</p>
+
+      <div style={s.howToBar}>
+        <span style={s.howToItem}><span style={s.howToNum}>1</span> Browse the recommendations below</span>
+        <span style={s.howToItem}><span style={s.howToNum}>2</span> Tap "Save" on anything you like</span>
+        <span style={s.howToItem}>
+          <span style={s.howToNum}>3</span> View or email it from your{' '}
+          <Link to="/itinerary" style={s.howToLink}>Itinerary</Link>
+        </span>
+      </div>
 
       <div style={s.tabs}>
         {['events', 'happenings', 'restaurants', 'bars', 'attractions'].map(tab => (
