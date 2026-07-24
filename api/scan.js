@@ -2,10 +2,8 @@ export default async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' })
   }
-
   try {
     const { image, mediaType } = req.body
-
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: {
@@ -37,7 +35,8 @@ export default async function handler(req, res) {
   "address": "full address if visible",
   "city": "city",
   "country": "country",
-  "date": "YYYY-MM-DD format",
+  "date": "YYYY-MM-DD format - the start date, or the only date if this is a single-day event",
+  "end_date": "YYYY-MM-DD format - ONLY fill this in if the flyer shows a date RANGE (e.g. 'March 13-17' or 'March 13 - 17'). Leave as empty string if it's a single-day event.",
   "time": "start time – end time",
   "genre": "music genre or type of event",
   "description": "brief description of the event",
@@ -50,13 +49,10 @@ If any field is not visible on the flyer, return an empty string for that field.
         ],
       }),
     })
-
     const data = await response.json()
     const text = data.content[0].text
-
     // Strip markdown code fences if Claude wraps the JSON in them
     const cleaned = text.trim().replace(/^```(?:json)?\s*/i, '').replace(/```\s*$/, '')
-
     try {
       const parsed = JSON.parse(cleaned)
       res.status(200).json(parsed)

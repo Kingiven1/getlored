@@ -33,7 +33,7 @@ function matchSupportedCity(detected) {
 
 const emptyEvent = {
   title: '', venue: '', address: '', city: '', country: '',
-  date: '', time: '', genre: '', description: '', ticket_url: '',
+  date: '', end_date: '', time: '', genre: '', description: '', ticket_url: '',
 }
 
 const emptyPlace = {
@@ -71,6 +71,7 @@ const s = {
   row: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' },
   fieldGroup: { display: 'flex', flexDirection: 'column', gap: '6px' },
   label: { fontFamily: "'DM Sans', sans-serif", fontSize: '11px', fontWeight: '500', letterSpacing: '0.08em', textTransform: 'uppercase', color: '#6B6560' },
+  hint: { fontFamily: "'DM Sans', sans-serif", fontSize: '11px', fontWeight: '300', color: '#9B9590' },
   input: { width: '100%', padding: '12px 16px', fontFamily: "'DM Sans', sans-serif", fontSize: '14px', fontWeight: '300', color: '#1A1A1A', backgroundColor: '#F2EEE9', border: '1px solid #E8E4DE', borderRadius: '2px', outline: 'none', boxSizing: 'border-box' },
   inputReview: { width: '100%', padding: '12px 16px', fontFamily: "'DM Sans', sans-serif", fontSize: '14px', fontWeight: '300', color: '#1A1A1A', backgroundColor: '#FDF8F5', border: '1px solid #B07D62', borderRadius: '2px', outline: 'none', boxSizing: 'border-box' },
   reviewHint: { fontFamily: "'DM Sans', sans-serif", fontSize: '11px', color: '#B07D62', marginTop: '2px' },
@@ -135,6 +136,21 @@ function resizeImage(file, maxWidth = 1000) {
 function formatDate(dateStr) {
   if (!dateStr) return ''
   return new Date(dateStr).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })
+}
+
+function formatDateRange(dateStr, endDateStr) {
+  if (!dateStr) return ''
+  if (!endDateStr || endDateStr === dateStr) return formatDate(dateStr)
+  const start = new Date(dateStr)
+  const end = new Date(endDateStr)
+  const startMonth = start.toLocaleDateString('en-US', { month: 'short' })
+  const endMonth = end.toLocaleDateString('en-US', { month: 'short' })
+  const startDay = start.getDate()
+  const endDay = end.getDate()
+  if (startMonth === endMonth) {
+    return `${startMonth} ${startDay}\u2013${endDay}`
+  }
+  return `${startMonth} ${startDay} \u2013 ${endMonth} ${endDay}`
 }
 
 function isPastDate(dateStr) {
@@ -368,6 +384,7 @@ export default function CuratorPortal() {
             city: matchedCity ? matchedCity.city : prev.city,
             country: matchedCity ? matchedCity.country : prev.country,
             date: data.date || prev.date,
+            end_date: data.end_date || prev.end_date,
             time: data.time || prev.time,
             genre: data.genre || prev.genre,
             description: data.description || prev.description,
@@ -491,6 +508,7 @@ export default function CuratorPortal() {
       city: evt.city || '',
       country: evt.country || '',
       date: evt.date || '',
+      end_date: evt.end_date || '',
       time: evt.time || '',
       genre: evt.genre || '',
       description: evt.description || '',
@@ -626,10 +644,16 @@ export default function CuratorPortal() {
       if (result.failed) flyerFailed = true
     }
 
+    const eventPayload = {
+      ...eventForm,
+      ticket_url: normalizeUrl(eventForm.ticket_url),
+      end_date: eventForm.end_date || null,
+    }
+
     if (editingEventId) {
       const { error } = await supabase
         .from('events')
-        .update({ ...eventForm, ticket_url: normalizeUrl(eventForm.ticket_url), flyer_url: flyerUrl })
+        .update({ ...eventPayload, flyer_url: flyerUrl })
         .eq('id', editingEventId)
 
       if (error) {
@@ -646,8 +670,7 @@ export default function CuratorPortal() {
       }
     } else {
       const { error } = await supabase.from('events').insert([{
-        ...eventForm, curator_id: user.id, status: 'published',
-        ticket_url: normalizeUrl(eventForm.ticket_url),
+        ...eventPayload, curator_id: user.id, status: 'published',
         flyer_url: flyerUrl,
       }])
       if (error) {
@@ -961,13 +984,18 @@ export default function CuratorPortal() {
                 </div>
                 <div style={s.row}>
                   <div style={s.fieldGroup}>
-                    <label style={s.label}>Date</label>
+                    <label style={s.label}>Start date</label>
                     <input style={s.input} name="date" type="date" value={eventForm.date} onChange={handleEventChange} required />
                   </div>
                   <div style={s.fieldGroup}>
-                    <label style={s.label}>Time</label>
-                    <input style={s.input} name="time" value={eventForm.time} onChange={handleEventChange} placeholder="10pm – 3am" />
+                    <label style={s.label}>End date</label>
+                    <input style={s.input} name="end_date" type="date" value={eventForm.end_date} onChange={handleEventChange} />
+                    <p style={s.hint}>Only for multi-day events, e.g. "March 13–17"</p>
                   </div>
+                </div>
+                <div style={s.fieldGroup}>
+                  <label style={s.label}>Time</label>
+                  <input style={s.input} name="time" value={eventForm.time} onChange={handleEventChange} placeholder="10pm – 3am" />
                 </div>
                 <div style={s.fieldGroup}>
                   <label style={s.label}>Ticket link</label>
@@ -1042,9 +1070,9 @@ export default function CuratorPortal() {
                 ) : (
                   <div style={s.myList}>
                     {visibleEvents.map(evt => (
-                      <div key={evt.id} style={isPastDate(evt.date) ? { ...s.myCard, ...s.myCardPast } : s.myCard}>
+                      <div key={evt.id} style={isPastDate(evt.end_date || evt.date) ? { ...s.myCard, ...s.myCardPast } : s.myCard}>
                         <div style={s.myInfo}>
-                          <p style={s.myEyebrow}>{formatDate(evt.date)}{isPastDate(evt.date) ? ' · Past' : ''}</p>
+                          <p style={s.myEyebrow}>{formatDateRange(evt.date, evt.end_date)}{isPastDate(evt.end_date || evt.date) ? ' · Past' : ''}</p>
                           <h3 style={s.myTitle}>{evt.title}</h3>
                           <p style={s.mySub}>{evt.venue}{evt.city ? ` · ${evt.city}` : ''}{evt.genre ? ` · ${evt.genre}` : ''}</p>
                         </div>
