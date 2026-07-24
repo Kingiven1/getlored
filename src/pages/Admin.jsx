@@ -38,7 +38,8 @@ const styles = {
   statNumber: { fontFamily: "'Cormorant Garamond', serif", fontSize: '40px', fontWeight: '500', color: '#1A1A1A', lineHeight: '1' },
   statLabel: { fontFamily: "'DM Sans', sans-serif", fontSize: '11px', fontWeight: '500', letterSpacing: '0.08em', textTransform: 'uppercase', color: '#9B9590', marginTop: '8px' },
   sectionTitle: { fontFamily: "'Cormorant Garamond', serif", fontSize: '24px', fontWeight: '500', color: '#1A1A1A', marginBottom: '20px', marginTop: '0' },
-  vercelLink: { display: 'inline-block', fontFamily: "'DM Sans', sans-serif", fontSize: '12px', fontWeight: '500', letterSpacing: '0.06em', textTransform: 'uppercase', color: '#B07D62', border: '1px solid #E8D5C4', backgroundColor: '#FDF8F5', padding: '10px 20px', borderRadius: '2px', marginBottom: '48px' },
+  sectionSubhead: { fontFamily: "'DM Sans', sans-serif", fontSize: '12px', fontWeight: '300', color: '#9B9590', marginBottom: '20px', marginTop: '-16px' },
+  vercelLink: { display: 'inline-block', fontFamily: "'DM Sans', sans-serif", fontSize: '11px', fontWeight: '500', letterSpacing: '0.06em', textTransform: 'uppercase', color: '#9B9590', border: '1px solid #E8E4DE', backgroundColor: 'transparent', padding: '8px 16px', borderRadius: '2px', marginBottom: '48px' },
   activityList: { display: 'flex', flexDirection: 'column', gap: '2px' },
   activityRow: { backgroundColor: '#F2EEE9', padding: '16px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', flexWrap: 'wrap' },
   activityLeft: { display: 'flex', alignItems: 'center', gap: '12px' },
@@ -194,7 +195,14 @@ function StatsPanel({ stats, statsLoading, approvedCuratorCount }) {
     return <p style={styles.emptyState}>Could not load stats.</p>
   }
 
-  const cards = [
+  const trafficCards = [
+    { label: 'Total Page Views (all-time)', value: stats.totalPageViews },
+    { label: 'Unique Visitors (7 days)', value: stats.uniqueVisitorsWeek },
+    { label: 'Unique Visitors (30 days)', value: stats.uniqueVisitorsMonth },
+    { label: 'Unique Visitors (90 days)', value: stats.uniqueVisitors90d },
+  ]
+
+  const contentCards = [
     { label: 'Events', value: stats.eventsTotal },
     { label: 'Places', value: stats.placesTotal },
     { label: 'Happenings', value: stats.happeningsTotal },
@@ -207,17 +215,29 @@ function StatsPanel({ stats, statsLoading, approvedCuratorCount }) {
 
   return (
     <>
+      <h2 style={styles.sectionTitle}>Site traffic</h2>
+      <p style={styles.sectionSubhead}>Tracked directly from your site — updates in real time as people visit.</p>
+      <div style={styles.statsGrid}>
+        {trafficCards.map(c => (
+          <div key={c.label} style={styles.statCard}>
+            <div style={styles.statNumber}>{c.value}</div>
+            <div style={styles.statLabel}>{c.label}</div>
+          </div>
+        ))}
+      </div>
+
       <a
         href="https://vercel.com/dashboard"
         target="_blank"
         rel="noopener noreferrer"
         style={styles.vercelLink}
       >
-        View visitor traffic in Vercel Analytics →
+        Also view in Vercel Analytics →
       </a>
 
+      <h2 style={styles.sectionTitle}>Platform stats</h2>
       <div style={styles.statsGrid}>
-        {cards.map(c => (
+        {contentCards.map(c => (
           <div key={c.label} style={styles.statCard}>
             <div style={styles.statNumber}>{c.value}</div>
             <div style={styles.statLabel}>{c.label}</div>
@@ -245,6 +265,28 @@ function StatsPanel({ stats, statsLoading, approvedCuratorCount }) {
                 <td style={styles.td}>{row.events}</td>
                 <td style={styles.td}>{row.places}</td>
                 <td style={styles.td}>{row.happenings}</td>
+              </tr>
+            ))
+          )}
+        </tbody>
+      </table>
+
+      <h2 style={styles.sectionTitle}>Top pages (90 days)</h2>
+      <table style={{ ...styles.table, marginBottom: '48px' }}>
+        <thead>
+          <tr>
+            <th style={styles.th}>Page</th>
+            <th style={styles.th}>Views</th>
+          </tr>
+        </thead>
+        <tbody>
+          {stats.topPages.length === 0 ? (
+            <tr><td style={styles.tdMuted} colSpan={2}>No data yet.</td></tr>
+          ) : (
+            stats.topPages.map(row => (
+              <tr key={row.path}>
+                <td style={styles.td}>{row.path}</td>
+                <td style={styles.td}>{row.count}</td>
               </tr>
             ))
           )}
@@ -337,12 +379,27 @@ export default function Admin() {
   async function fetchStats() {
     setStatsLoading(true)
     try {
-      const [eventsRes, placesRes, happeningsRes, djsRes, consentRes] = await Promise.all([
+      const now = new Date()
+      const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
+      const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000)
+      const ninetyDaysAgo = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000)
+
+      const [
+        eventsRes,
+        placesRes,
+        happeningsRes,
+        djsRes,
+        consentRes,
+        pageViewsCountRes,
+        recentViewsRes,
+      ] = await Promise.all([
         supabase.from('events').select('id, title, city, created_at'),
         supabase.from('places').select('id, name, city, created_at'),
         supabase.from('happenings').select('id, title, city, created_at'),
         supabase.from('dj_curators').select('id, city'),
         supabase.from('marketing_consent').select('id, email, created_at'),
+        supabase.from('page_views').select('id', { count: 'exact', head: true }),
+        supabase.from('page_views').select('visitor_id, path, created_at').gte('created_at', ninetyDaysAgo.toISOString()),
       ])
 
       const events = eventsRes.data || []
@@ -350,13 +407,29 @@ export default function Admin() {
       const happenings = happeningsRes.data || []
       const djs = djsRes.data || []
       const consent = consentRes.data || []
-
-      const now = new Date()
-      const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
-      const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000)
+      const totalPageViews = pageViewsCountRes.count || 0
+      const recentViews = recentViewsRes.data || []
 
       const signupsWeek = consent.filter(c => c.created_at && new Date(c.created_at) >= sevenDaysAgo).length
       const signupsMonth = consent.filter(c => c.created_at && new Date(c.created_at) >= thirtyDaysAgo).length
+
+      const uniqueVisitors90d = new Set(recentViews.map(v => v.visitor_id)).size
+      const uniqueVisitorsWeek = new Set(
+        recentViews.filter(v => v.created_at && new Date(v.created_at) >= sevenDaysAgo).map(v => v.visitor_id)
+      ).size
+      const uniqueVisitorsMonth = new Set(
+        recentViews.filter(v => v.created_at && new Date(v.created_at) >= thirtyDaysAgo).map(v => v.visitor_id)
+      ).size
+
+      const pageCountMap = {}
+      recentViews.forEach(v => {
+        const key = v.path || '/'
+        pageCountMap[key] = (pageCountMap[key] || 0) + 1
+      })
+      const topPages = Object.entries(pageCountMap)
+        .map(([path, count]) => ({ path, count }))
+        .sort((a, b) => b.count - a.count)
+        .slice(0, 10)
 
       const cityMap = {}
       function bump(city, field) {
@@ -391,6 +464,11 @@ export default function Admin() {
         signupsMonth,
         byCity,
         recentActivity: activity,
+        totalPageViews,
+        uniqueVisitors90d,
+        uniqueVisitorsWeek,
+        uniqueVisitorsMonth,
+        topPages,
       })
       setStatsLoaded(true)
     } catch (err) {
