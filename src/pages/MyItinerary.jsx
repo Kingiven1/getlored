@@ -9,6 +9,7 @@ const s = {
   sub: { fontFamily: "'DM Sans', sans-serif", fontSize: '14px', fontWeight: '300', color: '#6B6560', marginBottom: '32px', lineHeight: '1.6' },
   emailBtn: { padding: '14px 32px', fontFamily: "'DM Sans', sans-serif", fontSize: '13px', fontWeight: '500', letterSpacing: '0.06em', textTransform: 'uppercase', color: '#FAF8F5', backgroundColor: '#1A1A1A', border: 'none', borderRadius: '2px', cursor: 'pointer', marginBottom: '48px' },
   emailBtnDisabled: { opacity: 0.5, cursor: 'not-allowed' },
+  sectionHeading: { fontFamily: "'Cormorant Garamond', serif", fontSize: '32px', fontWeight: '500', color: '#1A1A1A', marginBottom: '24px', marginTop: '8px' },
   citySection: { marginBottom: '48px' },
   cityTitle: { fontFamily: "'Cormorant Garamond', serif", fontSize: '28px', fontWeight: '500', color: '#1A1A1A', marginBottom: '16px' },
   list: { display: 'flex', flexDirection: 'column', gap: '2px' },
@@ -25,11 +26,13 @@ const s = {
   banner: { fontFamily: "'DM Sans', sans-serif", fontSize: '13px', padding: '12px 16px', borderRadius: '2px', marginBottom: '24px' },
   bannerSuccess: { color: '#27AE60', backgroundColor: '#EDFAF3', border: '1px solid #B7EAD0' },
   bannerError: { color: '#C0392B', backgroundColor: '#FDF0EE', border: '1px solid #F5C6C0' },
+  divider: { height: '1px', backgroundColor: '#E8E4DE', margin: '48px 0' },
 }
 
 export default function MyItinerary() {
   const [user, setUser] = useState(undefined)
   const [savedPlaces, setSavedPlaces] = useState([])
+  const [savedDjs, setSavedDjs] = useState([])
   const [loading, setLoading] = useState(true)
   const [sending, setSending] = useState(false)
   const [banner, setBanner] = useState(null)
@@ -47,18 +50,31 @@ export default function MyItinerary() {
 
   async function fetchSaved(userId) {
     setLoading(true)
-    const { data } = await supabase
-      .from('saved_places')
-      .select('id, place_id, places (id, name, city, address, category, dining_style, website, google_maps_url)')
-      .eq('user_id', userId)
-      .order('created_at', { ascending: false })
-    setSavedPlaces(data || [])
+    const [placesRes, djsRes] = await Promise.all([
+      supabase
+        .from('saved_places')
+        .select('id, place_id, places (id, name, city, address, category, dining_style, website, google_maps_url)')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false }),
+      supabase
+        .from('saved_djs')
+        .select('id, dj_id, dj_curators (id, name, city, event_name, instagram_handle, genres)')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false }),
+    ])
+    setSavedPlaces(placesRes.data || [])
+    setSavedDjs(djsRes.data || [])
     setLoading(false)
   }
 
-  async function handleRemove(savedId) {
+  async function handleRemovePlace(savedId) {
     await supabase.from('saved_places').delete().eq('id', savedId)
     setSavedPlaces(prev => prev.filter(p => p.id !== savedId))
+  }
+
+  async function handleRemoveDj(savedId) {
+    await supabase.from('saved_djs').delete().eq('id', savedId)
+    setSavedDjs(prev => prev.filter(d => d.id !== savedId))
   }
 
   function showBanner(type, text) {
@@ -67,10 +83,11 @@ export default function MyItinerary() {
   }
 
   async function handleEmailMe() {
-    if (!user || savedPlaces.length === 0) return
+    if (!user || (savedPlaces.length === 0 && savedDjs.length === 0)) return
     setSending(true)
     try {
       const places = savedPlaces.map(sp => sp.places).filter(Boolean)
+      const djs = savedDjs.map(sd => sd.dj_curators).filter(Boolean)
       const res = await fetch('/api/send-itinerary', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -78,6 +95,7 @@ export default function MyItinerary() {
           email: user.email,
           name: user.user_metadata?.name || '',
           places,
+          djs,
         }),
       })
       const data = await res.json()
@@ -98,7 +116,7 @@ export default function MyItinerary() {
     return (
       <div style={s.gate}>
         <h2 style={s.gateHeadline}>Sign in to see your itinerary.</h2>
-        <p style={s.gateSub}>Save places from any city page, then find them all here.</p>
+        <p style={s.gateSub}>Save places and DJs from any city page, then find them all here.</p>
         <Link to="/login" style={s.gateBtn}>Sign in</Link>
       </div>
     )
@@ -113,6 +131,8 @@ export default function MyItinerary() {
     byCity[city].push({ savedId: sp.id, ...place })
   })
 
+  const hasAnything = savedPlaces.length > 0 || savedDjs.length > 0
+
   return (
     <main style={s.page}>
       <p style={s.eyebrow}>Your saved places</p>
@@ -125,7 +145,7 @@ export default function MyItinerary() {
         </p>
       )}
 
-      {!loading && savedPlaces.length > 0 && (
+      {!loading && hasAnything && (
         <button
           style={sending ? { ...s.emailBtn, ...s.emailBtnDisabled } : s.emailBtn}
           onClick={handleEmailMe}
@@ -137,26 +157,57 @@ export default function MyItinerary() {
 
       {loading ? (
         <p style={s.emptyState}>Loading your saved places...</p>
-      ) : savedPlaces.length === 0 ? (
-        <p style={s.emptyState}>You haven't saved any places yet. Browse a city and tap "Save" on anything that catches your eye.</p>
+      ) : !hasAnything ? (
+        <p style={s.emptyState}>You haven't saved anything yet. Browse a city and tap "Save" on any place or DJ that catches your eye.</p>
       ) : (
-        Object.entries(byCity).map(([city, places]) => (
-          <section key={city} style={s.citySection}>
-            <h2 style={s.cityTitle}>{city}</h2>
-            <div style={s.list}>
-              {places.map(place => (
-                <div key={place.savedId} style={s.card}>
-                  <div style={s.info}>
-                    <p style={s.meta}>{place.dining_style || place.category}</p>
-                    <h3 style={s.name}>{place.name}</h3>
-                    <p style={s.meta}>{place.address}</p>
+        <>
+          {savedPlaces.length > 0 && (
+            <>
+              {Object.entries(byCity).map(([city, places]) => (
+                <section key={city} style={s.citySection}>
+                  <h2 style={s.cityTitle}>{city}</h2>
+                  <div style={s.list}>
+                    {places.map(place => (
+                      <div key={place.savedId} style={s.card}>
+                        <div style={s.info}>
+                          <p style={s.meta}>{place.dining_style || place.category}</p>
+                          <h3 style={s.name}>{place.name}</h3>
+                          <p style={s.meta}>{place.address}</p>
+                        </div>
+                        <button style={s.removeBtn} onClick={() => handleRemovePlace(place.savedId)}>Remove</button>
+                      </div>
+                    ))}
                   </div>
-                  <button style={s.removeBtn} onClick={() => handleRemove(place.savedId)}>Remove</button>
-                </div>
+                </section>
               ))}
-            </div>
-          </section>
-        ))
+            </>
+          )}
+
+          {savedDjs.length > 0 && (
+            <>
+              {savedPlaces.length > 0 && <div style={s.divider} />}
+              <h2 style={s.sectionHeading}>DJs to check out</h2>
+              <div style={s.list}>
+                {savedDjs.map(sd => {
+                  const dj = sd.dj_curators
+                  if (!dj) return null
+                  return (
+                    <div key={sd.id} style={s.card}>
+                      <div style={s.info}>
+                        <p style={s.meta}>{dj.city}{dj.event_name ? ` · ${dj.event_name}` : ''}</p>
+                        <h3 style={s.name}>{dj.name}</h3>
+                        {Array.isArray(dj.genres) && dj.genres.length > 0 && (
+                          <p style={s.meta}>{dj.genres.join(', ')}</p>
+                        )}
+                      </div>
+                      <button style={s.removeBtn} onClick={() => handleRemoveDj(sd.id)}>Remove</button>
+                    </div>
+                  )
+                })}
+              </div>
+            </>
+          )}
+        </>
       )}
     </main>
   )
