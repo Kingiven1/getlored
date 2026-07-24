@@ -245,7 +245,30 @@ function StatsPanel({ stats, statsLoading, approvedCuratorCount }) {
         ))}
       </div>
 
-      <h2 style={styles.sectionTitle}>By city</h2>
+      <h2 style={styles.sectionTitle}>Signups by city</h2>
+      <p style={styles.sectionSubhead}>Where your users say they're based — useful for spotting where to activate or pitch local partnerships.</p>
+      <table style={{ ...styles.table, marginBottom: '48px' }}>
+        <thead>
+          <tr>
+            <th style={styles.th}>City</th>
+            <th style={styles.th}>Signups</th>
+          </tr>
+        </thead>
+        <tbody>
+          {stats.signupsByCity.length === 0 ? (
+            <tr><td style={styles.tdMuted} colSpan={2}>No data yet.</td></tr>
+          ) : (
+            stats.signupsByCity.map(row => (
+              <tr key={row.city}>
+                <td style={styles.td}>{row.city}</td>
+                <td style={styles.td}>{row.count}</td>
+              </tr>
+            ))
+          )}
+        </tbody>
+      </table>
+
+      <h2 style={styles.sectionTitle}>By city (content)</h2>
       <table style={{ ...styles.table, marginBottom: '48px' }}>
         <thead>
           <tr>
@@ -397,7 +420,7 @@ export default function Admin() {
         supabase.from('places').select('id, name, city, created_at'),
         supabase.from('happenings').select('id, title, city, created_at'),
         supabase.from('dj_curators').select('id, city'),
-        supabase.from('marketing_consent').select('id, email, created_at'),
+        supabase.from('marketing_consent').select('id, email, created_at, home_city'),
         supabase.from('page_views').select('id', { count: 'exact', head: true }),
         supabase.from('page_views').select('visitor_id, path, created_at').gte('created_at', ninetyDaysAgo.toISOString()),
       ])
@@ -444,6 +467,15 @@ export default function Admin() {
         (b.events + b.places + b.happenings) - (a.events + a.places + a.happenings)
       )
 
+      const signupCityMap = {}
+      consent.forEach(c => {
+        const key = (c.home_city && c.home_city.trim()) || 'Unspecified'
+        signupCityMap[key] = (signupCityMap[key] || 0) + 1
+      })
+      const signupsByCity = Object.entries(signupCityMap)
+        .map(([city, count]) => ({ city, count }))
+        .sort((a, b) => b.count - a.count)
+
       const activity = [
         ...events.map(e => ({ type: 'Event', label: e.title, created_at: e.created_at })),
         ...places.map(p => ({ type: 'Place', label: p.name, created_at: p.created_at })),
@@ -463,6 +495,7 @@ export default function Admin() {
         signupsWeek,
         signupsMonth,
         byCity,
+        signupsByCity,
         recentActivity: activity,
         totalPageViews,
         uniqueVisitors90d,
