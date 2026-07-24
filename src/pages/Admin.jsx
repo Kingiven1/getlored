@@ -33,6 +33,18 @@ const styles = {
   banner: { fontFamily: "'DM Sans', sans-serif", fontSize: '13px', padding: '12px 16px', borderRadius: '2px', marginBottom: '24px' },
   bannerSuccess: { color: '#27AE60', backgroundColor: '#EDFAF3', border: '1px solid #B7EAD0' },
   bannerError: { color: '#C0392B', backgroundColor: '#FDF0EE', border: '1px solid #F5C6C0' },
+  statsGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '2px', marginBottom: '48px' },
+  statCard: { backgroundColor: '#F2EEE9', padding: '24px' },
+  statNumber: { fontFamily: "'Cormorant Garamond', serif", fontSize: '40px', fontWeight: '500', color: '#1A1A1A', lineHeight: '1' },
+  statLabel: { fontFamily: "'DM Sans', sans-serif", fontSize: '11px', fontWeight: '500', letterSpacing: '0.08em', textTransform: 'uppercase', color: '#9B9590', marginTop: '8px' },
+  sectionTitle: { fontFamily: "'Cormorant Garamond', serif", fontSize: '24px', fontWeight: '500', color: '#1A1A1A', marginBottom: '20px', marginTop: '0' },
+  vercelLink: { display: 'inline-block', fontFamily: "'DM Sans', sans-serif", fontSize: '12px', fontWeight: '500', letterSpacing: '0.06em', textTransform: 'uppercase', color: '#B07D62', border: '1px solid #E8D5C4', backgroundColor: '#FDF8F5', padding: '10px 20px', borderRadius: '2px', marginBottom: '48px' },
+  activityList: { display: 'flex', flexDirection: 'column', gap: '2px' },
+  activityRow: { backgroundColor: '#F2EEE9', padding: '16px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', flexWrap: 'wrap' },
+  activityLeft: { display: 'flex', alignItems: 'center', gap: '12px' },
+  activityType: { display: 'inline-block', padding: '3px 10px', borderRadius: '2px', fontFamily: "'DM Sans', sans-serif", fontSize: '10px', fontWeight: '500', letterSpacing: '0.08em', textTransform: 'uppercase', backgroundColor: '#FDF8F5', color: '#B07D62', border: '1px solid #E8D5C4' },
+  activityTitle: { fontFamily: "'DM Sans', sans-serif", fontSize: '13px', color: '#1A1A1A' },
+  activityWhen: { fontFamily: "'DM Sans', sans-serif", fontSize: '12px', color: '#9B9590' },
 }
 
 function formatWhen(value) {
@@ -174,6 +186,91 @@ function CuratorsTable({ rows, busyId, onTogglePortal, onToggleAdmin, currentUse
   )
 }
 
+function StatsPanel({ stats, statsLoading, approvedCuratorCount }) {
+  if (statsLoading) {
+    return <p style={styles.emptyState}>Loading stats...</p>
+  }
+  if (!stats) {
+    return <p style={styles.emptyState}>Could not load stats.</p>
+  }
+
+  const cards = [
+    { label: 'Events', value: stats.eventsTotal },
+    { label: 'Places', value: stats.placesTotal },
+    { label: 'Happenings', value: stats.happeningsTotal },
+    { label: 'DJ Curators', value: stats.djsTotal },
+    { label: 'Approved Curators', value: approvedCuratorCount },
+    { label: 'Newsletter Signups', value: stats.signupsTotal },
+    { label: 'Signups (7 days)', value: stats.signupsWeek },
+    { label: 'Signups (30 days)', value: stats.signupsMonth },
+  ]
+
+  return (
+    <>
+      
+        href="https://vercel.com/dashboard"
+        target="_blank"
+        rel="noopener noreferrer"
+        style={styles.vercelLink}
+      >
+        View visitor traffic in Vercel Analytics →
+      </a>
+
+      <div style={styles.statsGrid}>
+        {cards.map(c => (
+          <div key={c.label} style={styles.statCard}>
+            <div style={styles.statNumber}>{c.value}</div>
+            <div style={styles.statLabel}>{c.label}</div>
+          </div>
+        ))}
+      </div>
+
+      <h2 style={styles.sectionTitle}>By city</h2>
+      <table style={{ ...styles.table, marginBottom: '48px' }}>
+        <thead>
+          <tr>
+            <th style={styles.th}>City</th>
+            <th style={styles.th}>Events</th>
+            <th style={styles.th}>Places</th>
+            <th style={styles.th}>Happenings</th>
+          </tr>
+        </thead>
+        <tbody>
+          {stats.byCity.length === 0 ? (
+            <tr><td style={styles.tdMuted} colSpan={4}>No data yet.</td></tr>
+          ) : (
+            stats.byCity.map(row => (
+              <tr key={row.city}>
+                <td style={styles.td}>{row.city}</td>
+                <td style={styles.td}>{row.events}</td>
+                <td style={styles.td}>{row.places}</td>
+                <td style={styles.td}>{row.happenings}</td>
+              </tr>
+            ))
+          )}
+        </tbody>
+      </table>
+
+      <h2 style={styles.sectionTitle}>Recent activity</h2>
+      {stats.recentActivity.length === 0 ? (
+        <p style={styles.emptyState}>Nothing yet.</p>
+      ) : (
+        <div style={styles.activityList}>
+          {stats.recentActivity.map((item, i) => (
+            <div key={i} style={styles.activityRow}>
+              <div style={styles.activityLeft}>
+                <span style={styles.activityType}>{item.type}</span>
+                <span style={styles.activityTitle}>{item.label}</span>
+              </div>
+              <span style={styles.activityWhen}>{formatWhen(item.created_at)}</span>
+            </div>
+          ))}
+        </div>
+      )}
+    </>
+  )
+}
+
 export default function Admin() {
   const navigate = useNavigate()
 
@@ -184,6 +281,10 @@ export default function Admin() {
   const [banner, setBanner] = useState(null)
   const [busyId, setBusyId] = useState(null)
   const [currentUserId, setCurrentUserId] = useState(null)
+
+  const [stats, setStats] = useState(null)
+  const [statsLoading, setStatsLoading] = useState(false)
+  const [statsLoaded, setStatsLoaded] = useState(false)
 
   useEffect(() => {
     let cancelled = false
@@ -226,6 +327,78 @@ export default function Admin() {
     bootstrap()
     return () => { cancelled = true }
   }, [])
+
+  useEffect(() => {
+    if (activeTab === 'stats' && !statsLoaded && phase === 'ready') {
+      fetchStats()
+    }
+  }, [activeTab, statsLoaded, phase])
+
+  async function fetchStats() {
+    setStatsLoading(true)
+    try {
+      const [eventsRes, placesRes, happeningsRes, djsRes, consentRes] = await Promise.all([
+        supabase.from('events').select('id, title, city, created_at'),
+        supabase.from('places').select('id, name, city, created_at'),
+        supabase.from('happenings').select('id, title, city, created_at'),
+        supabase.from('dj_curators').select('id, city'),
+        supabase.from('marketing_consent').select('id, email, created_at'),
+      ])
+
+      const events = eventsRes.data || []
+      const places = placesRes.data || []
+      const happenings = happeningsRes.data || []
+      const djs = djsRes.data || []
+      const consent = consentRes.data || []
+
+      const now = new Date()
+      const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
+      const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000)
+
+      const signupsWeek = consent.filter(c => c.created_at && new Date(c.created_at) >= sevenDaysAgo).length
+      const signupsMonth = consent.filter(c => c.created_at && new Date(c.created_at) >= thirtyDaysAgo).length
+
+      const cityMap = {}
+      function bump(city, field) {
+        const key = city || 'Unspecified'
+        if (!cityMap[key]) cityMap[key] = { city: key, events: 0, places: 0, happenings: 0 }
+        cityMap[key][field] += 1
+      }
+      events.forEach(e => bump(e.city, 'events'))
+      places.forEach(p => bump(p.city, 'places'))
+      happenings.forEach(h => bump(h.city, 'happenings'))
+      const byCity = Object.values(cityMap).sort((a, b) =>
+        (b.events + b.places + b.happenings) - (a.events + a.places + a.happenings)
+      )
+
+      const activity = [
+        ...events.map(e => ({ type: 'Event', label: e.title, created_at: e.created_at })),
+        ...places.map(p => ({ type: 'Place', label: p.name, created_at: p.created_at })),
+        ...happenings.map(h => ({ type: 'Happening', label: h.title, created_at: h.created_at })),
+        ...consent.map(c => ({ type: 'Signup', label: c.email, created_at: c.created_at })),
+      ]
+        .filter(item => item.created_at)
+        .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+        .slice(0, 15)
+
+      setStats({
+        eventsTotal: events.length,
+        placesTotal: places.length,
+        happeningsTotal: happenings.length,
+        djsTotal: djs.length,
+        signupsTotal: consent.length,
+        signupsWeek,
+        signupsMonth,
+        byCity,
+        recentActivity: activity,
+      })
+      setStatsLoaded(true)
+    } catch (err) {
+      console.error(err)
+    } finally {
+      setStatsLoading(false)
+    }
+  }
 
   function showBanner(type, text) {
     setBanner({ type, text })
@@ -357,13 +530,15 @@ export default function Admin() {
     )
   }
 
+  const approvedCuratorCount = curators.filter(c => c.approved).length
+
   return (
     <main style={styles.page}>
       <div style={styles.topRow}>
         <div>
           <p style={styles.eyebrow}>Admin</p>
           <h1 style={styles.headline}>Dashboard.</h1>
-          <p style={styles.sub}>Manage curator requests and approved curators.</p>
+          <p style={styles.sub}>Manage curator requests, approved curators, and platform stats.</p>
         </div>
         <button type="button" style={styles.signOutButton} onClick={handleSignOut}>Sign out</button>
       </div>
@@ -389,6 +564,13 @@ export default function Admin() {
         >
           Curators ({curators.length})
         </button>
+        <button
+          type="button"
+          style={activeTab === 'stats' ? { ...styles.tabButton, ...styles.tabButtonActive } : styles.tabButton}
+          onClick={() => setActiveTab('stats')}
+        >
+          Stats
+        </button>
       </div>
 
       {activeTab === 'requests' && (
@@ -408,6 +590,10 @@ export default function Admin() {
           onToggleAdmin={handleToggleAdmin}
           currentUserId={currentUserId}
         />
+      )}
+
+      {activeTab === 'stats' && (
+        <StatsPanel stats={stats} statsLoading={statsLoading} approvedCuratorCount={approvedCuratorCount} />
       )}
     </main>
   )
