@@ -51,10 +51,28 @@ function isInstagramUrl(url) {
   return url.toLowerCase().includes('instagram.com')
 }
 
+function formatDate(dateStr) {
+  if (!dateStr) return ''
+  return new Date(dateStr).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })
+}
+
+function formatDateRange(dateStr, endDateStr) {
+  if (!dateStr) return ''
+  if (!endDateStr || endDateStr === dateStr) return formatDate(dateStr)
+  const start = new Date(dateStr)
+  const end = new Date(endDateStr)
+  const startMonth = start.toLocaleDateString('en-US', { month: 'short' })
+  const endMonth = end.toLocaleDateString('en-US', { month: 'short' })
+  const startDay = start.getDate()
+  const endDay = end.getDate()
+  if (startMonth === endMonth) {
+    return `${startMonth} ${startDay}\u2013${endDay}`
+  }
+  return `${startMonth} ${startDay} \u2013 ${endMonth} ${endDay}`
+}
+
 function EventCard({ event, locked, onLockedClick }) {
-  const dateLabel = event.date
-    ? new Date(event.date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })
-    : ''
+  const dateLabel = formatDateRange(event.date, event.end_date)
 
   const inner = (
     <>
