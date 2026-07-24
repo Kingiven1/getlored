@@ -207,7 +207,7 @@ function StatsPanel({ stats, statsLoading, approvedCuratorCount }) {
 
   return (
     <>
-      
+      <a
         href="https://vercel.com/dashboard"
         target="_blank"
         rel="noopener noreferrer"
