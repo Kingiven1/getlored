@@ -76,14 +76,34 @@ export default function CuratorLogin() {
         {notApproved && <p style={s.pending}>Your account is pending approval. We'll reach out soon.</p>}
         {resetSent && <p style={s.resetSuccess}>Reset email sent — check your inbox.</p>}
 
-        <form style={s.form} onSubmit={handleSubmit}>
+        <form style={s.form} onSubmit={handleSubmit} autoComplete="on">
           <div>
-            <label style={s.label}>Email</label>
-            <input style={s.input} type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="you@example.com" required />
+            <label style={s.label} htmlFor="curator-email">Email</label>
+            <input
+              style={s.input}
+              id="curator-email"
+              name="email"
+              type="email"
+              autoComplete="username"
+              value={email}
+              onChange={e => setEmail(e.target.value)}
+              placeholder="you@example.com"
+              required
+            />
           </div>
           <div>
-            <label style={s.label}>Password</label>
-            <input style={s.input} type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="••••••••" required />
+            <label style={s.label} htmlFor="curator-password">Password</label>
+            <input
+              style={s.input}
+              id="curator-password"
+              name="password"
+              type="password"
+              autoComplete="current-password"
+              value={password}
+              onChange={e => setPassword(e.target.value)}
+              placeholder="••••••••"
+              required
+            />
             <span style={s.forgotLink} onClick={handleForgotPassword}>Forgot password?</span>
           </div>
           <button type="submit" style={s.button} disabled={loading}>
