@@ -20,6 +20,8 @@ const s = {
   info: { flex: 1, minWidth: '200px' },
   name: { fontFamily: "'Cormorant Garamond', serif", fontSize: '20px', fontWeight: '500', color: '#1A1A1A', marginBottom: '4px' },
   meta: { fontFamily: "'DM Sans', sans-serif", fontSize: '13px', fontWeight: '300', color: '#6B6560' },
+  linkRow: { display: 'flex', gap: '14px', marginTop: '6px', flexWrap: 'wrap' },
+  linkItem: { fontFamily: "'DM Sans', sans-serif", fontSize: '12px', color: '#B07D62', textDecoration: 'none' },
   removeBtn: { padding: '8px 18px', fontFamily: "'DM Sans', sans-serif", fontSize: '11px', fontWeight: '500', letterSpacing: '0.06em', textTransform: 'uppercase', color: '#C0392B', backgroundColor: 'transparent', border: '1px solid #C0392B', borderRadius: '2px', cursor: 'pointer', flexShrink: 0 },
   emptyState: { fontFamily: "'Cormorant Garamond', serif", fontSize: '22px', fontStyle: 'italic', color: '#9B9590', textAlign: 'center', padding: '80px 0' },
   gate: { textAlign: 'center', padding: '120px 32px' },
@@ -33,17 +35,20 @@ const s = {
   divider: { height: '1px', backgroundColor: '#E8E4DE', margin: '48px 0' },
   collabNote: { fontFamily: "'DM Sans', sans-serif", fontSize: '12px', fontWeight: '400', color: '#B07D62', marginBottom: '32px' },
   uploadPanel: { backgroundColor: '#F7F0EB', border: '1px solid #E8D5C8', borderRadius: '2px', padding: '24px', marginBottom: '48px' },
-  uploadPanelTitle: { fontFamily: "'Cormorant Garamond', serif", fontSize: '22px', fontWeight: '500', color: '#1A1A1A', marginBottom: '16px' },
+  uploadPanelTitle: { fontFamily: "'Cormorant Garamond', serif", fontSize: '22px', fontWeight: '500', color: '#1A1A1A', marginBottom: '4px' },
+  uploadPanelType: { fontFamily: "'DM Sans', sans-serif", fontSize: '11px', fontWeight: '500', letterSpacing: '0.08em', textTransform: 'uppercase', color: '#B07D62', marginBottom: '16px' },
   field: { width: '100%', boxSizing: 'border-box', padding: '10px 12px', fontFamily: "'DM Sans', sans-serif", fontSize: '13px', color: '#1A1A1A', backgroundColor: '#FAF8F5', border: '1px solid #E8E4DE', borderRadius: '2px', marginBottom: '10px' },
   fieldRow: { display: 'flex', gap: '10px' },
+  fieldLabel: { fontFamily: "'DM Sans', sans-serif", fontSize: '10px', fontWeight: '500', letterSpacing: '0.06em', textTransform: 'uppercase', color: '#9B9590', margin: '16px 0 6px 0' },
   confirmRow: { display: 'flex', gap: '12px', marginTop: '8px' },
   confirmBtn: { padding: '10px 24px', fontFamily: "'DM Sans', sans-serif", fontSize: '12px', fontWeight: '500', letterSpacing: '0.06em', textTransform: 'uppercase', color: '#FAF8F5', backgroundColor: '#1A1A1A', border: 'none', borderRadius: '2px', cursor: 'pointer' },
   cancelBtn: { padding: '10px 24px', fontFamily: "'DM Sans', sans-serif", fontSize: '12px', fontWeight: '500', letterSpacing: '0.06em', textTransform: 'uppercase', color: '#6B6560', backgroundColor: 'transparent', border: '1px solid #E8E4DE', borderRadius: '2px', cursor: 'pointer' },
 }
 
-const EMPTY_FLYER_EVENT = {
-  title: '', venue: '', address: '', city: '', country: '',
+const EMPTY_FLYER_ITEM = {
+  item_type: 'event', title: '', venue: '', address: '', city: '', country: '',
   date: '', end_date: '', time: '', genre: '', description: '', ticket_url: '',
+  instagram_handle: '', website: '', google_maps_url: '',
 }
 
 export default function MyItinerary() {
@@ -52,7 +57,7 @@ export default function MyItinerary() {
 
   const [user, setUser] = useState(undefined)
   const [itineraryId, setItineraryId] = useState(null)
-  const [itineraryMeta, setItineraryMeta] = useState(null) // { name, shareToken, isOwner }
+  const [itineraryMeta, setItineraryMeta] = useState(null)
   const [savedPlaces, setSavedPlaces] = useState([])
   const [savedDjs, setSavedDjs] = useState([])
   const [flyerEvents, setFlyerEvents] = useState([])
@@ -61,10 +66,10 @@ export default function MyItinerary() {
   const [banner, setBanner] = useState(null)
   const [copyLabel, setCopyLabel] = useState('Copy invite link')
 
-  const [previewOnly, setPreviewOnly] = useState(false) // not-logged-in token preview
+  const [previewOnly, setPreviewOnly] = useState(false)
 
   const [scanning, setScanning] = useState(false)
-  const [pendingFlyer, setPendingFlyer] = useState(null) // parsed AI result, awaiting confirm
+  const [pendingFlyer, setPendingFlyer] = useState(null)
   const fileInputRef = useRef(null)
 
   useEffect(() => {
@@ -233,29 +238,29 @@ export default function MyItinerary() {
   function handleFileSelect(e) {
     const file = e.target.files?.[0]
     if (!file) return
-    scanFlyer(file)
+    scanUpload(file)
     e.target.value = ''
   }
 
-  function scanFlyer(file) {
+  function scanUpload(file) {
     setScanning(true)
     const reader = new FileReader()
     reader.onload = async () => {
       try {
         const base64 = reader.result.split(',')[1]
-        const res = await fetch('/api/scan', {
+        const res = await fetch('/api/scan-personal', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ image: base64, mediaType: file.type }),
         })
         const data = await res.json()
-        if (data.raw) {
-          showBanner('error', "Couldn't read that flyer clearly. Try a clearer photo.")
+        if (data.raw || data.error) {
+          showBanner('error', "Couldn't read that clearly. Try a clearer photo.")
         } else {
-          setPendingFlyer({ ...EMPTY_FLYER_EVENT, ...data })
+          setPendingFlyer({ ...EMPTY_FLYER_ITEM, ...data })
         }
       } catch {
-        showBanner('error', "Couldn't read that flyer. Try again.")
+        showBanner('error', "Couldn't read that. Try again.")
       }
       setScanning(false)
     }
@@ -273,6 +278,7 @@ export default function MyItinerary() {
       .insert({
         itinerary_id: itineraryId,
         added_by: user.id,
+        item_type: pendingFlyer.item_type || 'event',
         title: pendingFlyer.title,
         venue: pendingFlyer.venue,
         address: pendingFlyer.address,
@@ -284,6 +290,9 @@ export default function MyItinerary() {
         genre: pendingFlyer.genre,
         description: pendingFlyer.description,
         ticket_url: pendingFlyer.ticket_url,
+        instagram_handle: pendingFlyer.instagram_handle,
+        website: pendingFlyer.website,
+        google_maps_url: pendingFlyer.google_maps_url,
       })
       .select()
       .single()
@@ -361,7 +370,7 @@ export default function MyItinerary() {
             <button style={s.shareBtn} onClick={handleCopyInvite}>{copyLabel}</button>
           )}
           <button style={s.uploadBtn} onClick={() => fileInputRef.current?.click()}>
-            + Add from a flyer
+            + Add from a flyer or screenshot
           </button>
           <input
             ref={fileInputRef}
@@ -374,25 +383,45 @@ export default function MyItinerary() {
       )}
 
       {scanning && (
-        <p style={{ ...s.banner, ...s.bannerInfo }}>Reading your flyer...</p>
+        <p style={{ ...s.banner, ...s.bannerInfo }}>Reading and researching that for you...</p>
       )}
 
       {pendingFlyer && (
         <div style={s.uploadPanel}>
-          <h3 style={s.uploadPanelTitle}>Confirm event details</h3>
-          <input style={s.field} placeholder="Title" value={pendingFlyer.title} onChange={e => updatePendingField('title', e.target.value)} />
+          <h3 style={s.uploadPanelTitle}>Confirm details</h3>
+          <p style={s.uploadPanelType}>{pendingFlyer.item_type === 'place' ? 'Place' : 'Event'}</p>
+
+          <input style={s.field} placeholder="Title / name" value={pendingFlyer.title} onChange={e => updatePendingField('title', e.target.value)} />
+
           <div style={s.fieldRow}>
-            <input style={s.field} placeholder="Venue" value={pendingFlyer.venue} onChange={e => updatePendingField('venue', e.target.value)} />
+            {pendingFlyer.item_type !== 'place' && (
+              <input style={s.field} placeholder="Venue" value={pendingFlyer.venue} onChange={e => updatePendingField('venue', e.target.value)} />
+            )}
             <input style={s.field} placeholder="City" value={pendingFlyer.city} onChange={e => updatePendingField('city', e.target.value)} />
           </div>
+
           <input style={s.field} placeholder="Address" value={pendingFlyer.address} onChange={e => updatePendingField('address', e.target.value)} />
+
+          {pendingFlyer.item_type !== 'place' && (
+            <div style={s.fieldRow}>
+              <input style={s.field} placeholder="Date (YYYY-MM-DD)" value={pendingFlyer.date} onChange={e => updatePendingField('date', e.target.value)} />
+              <input style={s.field} placeholder="End date (if multi-day)" value={pendingFlyer.end_date} onChange={e => updatePendingField('end_date', e.target.value)} />
+              <input style={s.field} placeholder="Time" value={pendingFlyer.time} onChange={e => updatePendingField('time', e.target.value)} />
+            </div>
+          )}
+
+          <input style={s.field} placeholder="Genre / type" value={pendingFlyer.genre} onChange={e => updatePendingField('genre', e.target.value)} />
+
+          <p style={s.fieldLabel}>Links & socials</p>
           <div style={s.fieldRow}>
-            <input style={s.field} placeholder="Date (YYYY-MM-DD)" value={pendingFlyer.date} onChange={e => updatePendingField('date', e.target.value)} />
-            <input style={s.field} placeholder="End date (if multi-day)" value={pendingFlyer.end_date} onChange={e => updatePendingField('end_date', e.target.value)} />
-            <input style={s.field} placeholder="Time" value={pendingFlyer.time} onChange={e => updatePendingField('time', e.target.value)} />
+            <input style={s.field} placeholder="Instagram (@handle)" value={pendingFlyer.instagram_handle} onChange={e => updatePendingField('instagram_handle', e.target.value)} />
+            <input style={s.field} placeholder="Website" value={pendingFlyer.website} onChange={e => updatePendingField('website', e.target.value)} />
           </div>
-          <input style={s.field} placeholder="Genre" value={pendingFlyer.genre} onChange={e => updatePendingField('genre', e.target.value)} />
-          <input style={s.field} placeholder="Ticket link" value={pendingFlyer.ticket_url} onChange={e => updatePendingField('ticket_url', e.target.value)} />
+          <input style={s.field} placeholder="Google Maps link" value={pendingFlyer.google_maps_url} onChange={e => updatePendingField('google_maps_url', e.target.value)} />
+          {pendingFlyer.item_type !== 'place' && (
+            <input style={s.field} placeholder="Ticket / RSVP link" value={pendingFlyer.ticket_url} onChange={e => updatePendingField('ticket_url', e.target.value)} />
+          )}
+
           <div style={s.confirmRow}>
             <button style={s.confirmBtn} onClick={handleConfirmFlyer}>Add to itinerary</button>
             <button style={s.cancelBtn} onClick={() => setPendingFlyer(null)}>Cancel</button>
@@ -406,22 +435,32 @@ export default function MyItinerary() {
         <p style={s.emptyState}>
           {previewOnly
             ? "Nothing saved on this itinerary yet."
-            : 'You haven\'t saved anything yet. Browse a city and tap "Save," or add an event straight from a flyer.'}
+            : 'You haven\'t saved anything yet. Browse a city and tap "Save," or add something straight from a flyer or screenshot.'}
         </p>
       ) : (
         <>
           {flyerEvents.length > 0 && (
             <section style={s.citySection}>
-              <h2 style={s.sectionHeading}>From flyers</h2>
+              <h2 style={s.sectionHeading}>Added by you</h2>
               <div style={s.list}>
                 {flyerEvents.map(ev => (
                   <div key={ev.id} style={s.card}>
                     <div style={s.info}>
                       <p style={s.meta}>
-                        {ev.venue}{ev.city ? ` · ${ev.city}` : ''}{ev.event_date ? ` · ${ev.event_date}` : ''}
+                        {ev.item_type === 'place' ? (ev.address || ev.city) : `${ev.venue || ''}${ev.city ? ` · ${ev.city}` : ''}${ev.event_date ? ` · ${ev.event_date}` : ''}`}
                       </p>
                       <h3 style={s.name}>{ev.title}</h3>
                       {ev.event_time && <p style={s.meta}>{ev.event_time}</p>}
+                      {(ev.instagram_handle || ev.website || ev.google_maps_url || ev.ticket_url) && (
+                        <div style={s.linkRow}>
+                          {ev.instagram_handle && (
+                            <a style={s.linkItem} href={`https://instagram.com/${ev.instagram_handle.replace('@', '')}`} target="_blank" rel="noreferrer">Instagram →</a>
+                          )}
+                          {ev.website && <a style={s.linkItem} href={ev.website} target="_blank" rel="noreferrer">Website →</a>}
+                          {ev.google_maps_url && <a style={s.linkItem} href={ev.google_maps_url} target="_blank" rel="noreferrer">Maps →</a>}
+                          {ev.ticket_url && <a style={s.linkItem} href={ev.ticket_url} target="_blank" rel="noreferrer">Tickets / RSVP →</a>}
+                        </div>
+                      )}
                     </div>
                     {!previewOnly && (
                       <button style={s.removeBtn} onClick={() => handleRemoveEvent(ev.id)}>Remove</button>
