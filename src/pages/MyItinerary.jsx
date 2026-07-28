@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react'
-import { Link } from 'react-router-dom'
+import { useState, useEffect, useRef } from 'react'
+import { Link, useSearchParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase.js'
 
 const s = {
@@ -7,8 +7,11 @@ const s = {
   eyebrow: { fontFamily: "'DM Sans', sans-serif", fontSize: '11px', fontWeight: '500', letterSpacing: '0.12em', textTransform: 'uppercase', color: '#B07D62', marginBottom: '16px' },
   headline: { fontFamily: "'Cormorant Garamond', serif", fontSize: 'clamp(36px, 5vw, 56px)', fontWeight: '500', color: '#1A1A1A', marginBottom: '8px', lineHeight: '1.1' },
   sub: { fontFamily: "'DM Sans', sans-serif", fontSize: '14px', fontWeight: '300', color: '#6B6560', marginBottom: '32px', lineHeight: '1.6' },
-  emailBtn: { padding: '14px 32px', fontFamily: "'DM Sans', sans-serif", fontSize: '13px', fontWeight: '500', letterSpacing: '0.06em', textTransform: 'uppercase', color: '#FAF8F5', backgroundColor: '#1A1A1A', border: 'none', borderRadius: '2px', cursor: 'pointer', marginBottom: '48px' },
-  emailBtnDisabled: { opacity: 0.5, cursor: 'not-allowed' },
+  actionsRow: { display: 'flex', gap: '12px', flexWrap: 'wrap', marginBottom: '48px' },
+  emailBtn: { padding: '14px 32px', fontFamily: "'DM Sans', sans-serif", fontSize: '13px', fontWeight: '500', letterSpacing: '0.06em', textTransform: 'uppercase', color: '#FAF8F5', backgroundColor: '#1A1A1A', border: 'none', borderRadius: '2px', cursor: 'pointer' },
+  shareBtn: { padding: '14px 32px', fontFamily: "'DM Sans', sans-serif", fontSize: '13px', fontWeight: '500', letterSpacing: '0.06em', textTransform: 'uppercase', color: '#1A1A1A', backgroundColor: 'transparent', border: '1px solid #1A1A1A', borderRadius: '2px', cursor: 'pointer' },
+  uploadBtn: { padding: '14px 32px', fontFamily: "'DM Sans', sans-serif", fontSize: '13px', fontWeight: '500', letterSpacing: '0.06em', textTransform: 'uppercase', color: '#B07D62', backgroundColor: 'transparent', border: '1px solid #B07D62', borderRadius: '2px', cursor: 'pointer' },
+  btnDisabled: { opacity: 0.5, cursor: 'not-allowed' },
   sectionHeading: { fontFamily: "'Cormorant Garamond', serif", fontSize: '32px', fontWeight: '500', color: '#1A1A1A', marginBottom: '24px', marginTop: '8px' },
   citySection: { marginBottom: '48px' },
   cityTitle: { fontFamily: "'Cormorant Garamond', serif", fontSize: '28px', fontWeight: '500', color: '#1A1A1A', marginBottom: '16px' },
@@ -26,44 +29,148 @@ const s = {
   banner: { fontFamily: "'DM Sans', sans-serif", fontSize: '13px', padding: '12px 16px', borderRadius: '2px', marginBottom: '24px' },
   bannerSuccess: { color: '#27AE60', backgroundColor: '#EDFAF3', border: '1px solid #B7EAD0' },
   bannerError: { color: '#C0392B', backgroundColor: '#FDF0EE', border: '1px solid #F5C6C0' },
+  bannerInfo: { color: '#B07D62', backgroundColor: '#F7F0EB', border: '1px solid #E8D5C8' },
   divider: { height: '1px', backgroundColor: '#E8E4DE', margin: '48px 0' },
+  collabNote: { fontFamily: "'DM Sans', sans-serif", fontSize: '12px', fontWeight: '400', color: '#B07D62', marginBottom: '32px' },
+  uploadPanel: { backgroundColor: '#F7F0EB', border: '1px solid #E8D5C8', borderRadius: '2px', padding: '24px', marginBottom: '48px' },
+  uploadPanelTitle: { fontFamily: "'Cormorant Garamond', serif", fontSize: '22px', fontWeight: '500', color: '#1A1A1A', marginBottom: '16px' },
+  field: { width: '100%', boxSizing: 'border-box', padding: '10px 12px', fontFamily: "'DM Sans', sans-serif", fontSize: '13px', color: '#1A1A1A', backgroundColor: '#FAF8F5', border: '1px solid #E8E4DE', borderRadius: '2px', marginBottom: '10px' },
+  fieldRow: { display: 'flex', gap: '10px' },
+  confirmRow: { display: 'flex', gap: '12px', marginTop: '8px' },
+  confirmBtn: { padding: '10px 24px', fontFamily: "'DM Sans', sans-serif", fontSize: '12px', fontWeight: '500', letterSpacing: '0.06em', textTransform: 'uppercase', color: '#FAF8F5', backgroundColor: '#1A1A1A', border: 'none', borderRadius: '2px', cursor: 'pointer' },
+  cancelBtn: { padding: '10px 24px', fontFamily: "'DM Sans', sans-serif", fontSize: '12px', fontWeight: '500', letterSpacing: '0.06em', textTransform: 'uppercase', color: '#6B6560', backgroundColor: 'transparent', border: '1px solid #E8E4DE', borderRadius: '2px', cursor: 'pointer' },
+}
+
+const EMPTY_FLYER_EVENT = {
+  title: '', venue: '', address: '', city: '', country: '',
+  date: '', end_date: '', time: '', genre: '', description: '', ticket_url: '',
 }
 
 export default function MyItinerary() {
+  const [searchParams] = useSearchParams()
+  const inviteToken = searchParams.get('t')
+
   const [user, setUser] = useState(undefined)
+  const [itineraryId, setItineraryId] = useState(null)
+  const [itineraryMeta, setItineraryMeta] = useState(null) // { name, shareToken, isOwner }
   const [savedPlaces, setSavedPlaces] = useState([])
   const [savedDjs, setSavedDjs] = useState([])
+  const [flyerEvents, setFlyerEvents] = useState([])
   const [loading, setLoading] = useState(true)
   const [sending, setSending] = useState(false)
   const [banner, setBanner] = useState(null)
+  const [copyLabel, setCopyLabel] = useState('Copy invite link')
+
+  const [previewOnly, setPreviewOnly] = useState(false) // not-logged-in token preview
+
+  const [scanning, setScanning] = useState(false)
+  const [pendingFlyer, setPendingFlyer] = useState(null) // parsed AI result, awaiting confirm
+  const fileInputRef = useRef(null)
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setUser(session?.user ?? null)
-      if (session?.user) {
-        fetchSaved(session.user.id)
-      } else {
-        setLoading(false)
-      }
     })
   }, [])
 
-  async function fetchSaved(userId) {
+  useEffect(() => {
+    if (user === undefined) return
+
+    if (!user) {
+      if (inviteToken) {
+        loadPreview(inviteToken)
+      } else {
+        setLoading(false)
+      }
+      return
+    }
+
+    resolveItinerary()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user, inviteToken])
+
+  async function loadPreview(token) {
     setLoading(true)
-    const [placesRes, djsRes] = await Promise.all([
+    setPreviewOnly(true)
+    const { data, error } = await supabase.rpc('get_itinerary_items_by_token', { p_token: token })
+    if (!error && data) {
+      setItineraryMeta({ name: data.name })
+      setSavedPlaces((data.places || []).map(p => ({ id: null, places: p })))
+      setSavedDjs((data.djs || []).map(d => ({ id: null, dj_curators: d })))
+      setFlyerEvents(data.events || [])
+    } else {
+      showBanner('error', 'That invite link is invalid or has expired.')
+    }
+    setLoading(false)
+  }
+
+  async function resolveItinerary() {
+    setLoading(true)
+    try {
+      let id
+      if (inviteToken) {
+        const { data, error } = await supabase.rpc('accept_itinerary_invite', { p_token: inviteToken })
+        if (error) {
+          showBanner('error', "That invite link is invalid or has expired. Showing your own itinerary instead.")
+          id = await getOrCreateOwnItinerary()
+        } else {
+          id = data
+          showBanner('success', "You're in — you can now add and remove items on this itinerary.")
+        }
+      } else {
+        id = await getOrCreateOwnItinerary()
+      }
+
+      setItineraryId(id)
+
+      const { data: itineraryRow } = await supabase
+        .from('itineraries')
+        .select('id, name, share_token, owner_id')
+        .eq('id', id)
+        .single()
+
+      if (itineraryRow) {
+        setItineraryMeta({
+          name: itineraryRow.name,
+          shareToken: itineraryRow.share_token,
+          isOwner: itineraryRow.owner_id === user.id,
+        })
+      }
+
+      await fetchAll(id)
+    } catch {
+      showBanner('error', 'Something went wrong loading your itinerary.')
+      setLoading(false)
+    }
+  }
+
+  async function getOrCreateOwnItinerary() {
+    const { data, error } = await supabase.rpc('get_or_create_default_itinerary', { p_user_id: user.id })
+    if (error) throw error
+    return data
+  }
+
+  async function fetchAll(id) {
+    const [placesRes, djsRes, eventsRes] = await Promise.all([
       supabase
         .from('saved_places')
         .select('id, place_id, places (id, name, city, address, category, dining_style, website, google_maps_url)')
-        .eq('user_id', userId)
+        .eq('itinerary_id', id)
         .order('created_at', { ascending: false }),
       supabase
         .from('saved_djs')
         .select('id, dj_id, dj_curators (id, name, city, event_name, instagram_handle, genres)')
-        .eq('user_id', userId)
+        .eq('itinerary_id', id)
+        .order('created_at', { ascending: false }),
+      supabase
+        .from('itinerary_events')
+        .select('*')
+        .eq('itinerary_id', id)
         .order('created_at', { ascending: false }),
     ])
     setSavedPlaces(placesRes.data || [])
     setSavedDjs(djsRes.data || [])
+    setFlyerEvents(eventsRes.data || [])
     setLoading(false)
   }
 
@@ -77,9 +184,14 @@ export default function MyItinerary() {
     setSavedDjs(prev => prev.filter(d => d.id !== savedId))
   }
 
+  async function handleRemoveEvent(eventId) {
+    await supabase.from('itinerary_events').delete().eq('id', eventId)
+    setFlyerEvents(prev => prev.filter(e => e.id !== eventId))
+  }
+
   function showBanner(type, text) {
     setBanner({ type, text })
-    setTimeout(() => setBanner(null), 4000)
+    setTimeout(() => setBanner(null), 5000)
   }
 
   async function handleEmailMe() {
@@ -110,9 +222,84 @@ export default function MyItinerary() {
     setSending(false)
   }
 
+  function handleCopyInvite() {
+    if (!itineraryMeta?.shareToken) return
+    const url = `${window.location.origin}/itinerary?t=${itineraryMeta.shareToken}`
+    navigator.clipboard.writeText(url)
+    setCopyLabel('Link copied!')
+    setTimeout(() => setCopyLabel('Copy invite link'), 2500)
+  }
+
+  function handleFileSelect(e) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    scanFlyer(file)
+    e.target.value = ''
+  }
+
+  function scanFlyer(file) {
+    setScanning(true)
+    const reader = new FileReader()
+    reader.onload = async () => {
+      try {
+        const base64 = reader.result.split(',')[1]
+        const res = await fetch('/api/scan', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ image: base64, mediaType: file.type }),
+        })
+        const data = await res.json()
+        if (data.raw) {
+          showBanner('error', "Couldn't read that flyer clearly. Try a clearer photo.")
+        } else {
+          setPendingFlyer({ ...EMPTY_FLYER_EVENT, ...data })
+        }
+      } catch {
+        showBanner('error', "Couldn't read that flyer. Try again.")
+      }
+      setScanning(false)
+    }
+    reader.readAsDataURL(file)
+  }
+
+  function updatePendingField(field, value) {
+    setPendingFlyer(prev => ({ ...prev, [field]: value }))
+  }
+
+  async function handleConfirmFlyer() {
+    if (!pendingFlyer || !itineraryId) return
+    const { data, error } = await supabase
+      .from('itinerary_events')
+      .insert({
+        itinerary_id: itineraryId,
+        added_by: user.id,
+        title: pendingFlyer.title,
+        venue: pendingFlyer.venue,
+        address: pendingFlyer.address,
+        city: pendingFlyer.city,
+        country: pendingFlyer.country,
+        event_date: pendingFlyer.date || null,
+        end_date: pendingFlyer.end_date || null,
+        event_time: pendingFlyer.time,
+        genre: pendingFlyer.genre,
+        description: pendingFlyer.description,
+        ticket_url: pendingFlyer.ticket_url,
+      })
+      .select()
+      .single()
+
+    if (error) {
+      showBanner('error', "Couldn't add that to your itinerary. Try again.")
+    } else {
+      setFlyerEvents(prev => [data, ...prev])
+      showBanner('success', 'Added to your itinerary.')
+    }
+    setPendingFlyer(null)
+  }
+
   if (user === undefined) return null
 
-  if (!user) {
+  if (!user && !previewOnly) {
     return (
       <div style={s.gate}>
         <h2 style={s.gateHeadline}>Sign in to see your itinerary.</h2>
@@ -131,36 +318,120 @@ export default function MyItinerary() {
     byCity[city].push({ savedId: sp.id, ...place })
   })
 
-  const hasAnything = savedPlaces.length > 0 || savedDjs.length > 0
+  const hasAnything = savedPlaces.length > 0 || savedDjs.length > 0 || flyerEvents.length > 0
 
   return (
     <main style={s.page}>
-      <p style={s.eyebrow}>Your saved places</p>
-      <h1 style={s.headline}>Itinerary.</h1>
-      <p style={s.sub}>Everything you've saved, in one place. Email it to yourself whenever you're ready.</p>
+      <p style={s.eyebrow}>{previewOnly ? "You've been invited" : 'Your saved places'}</p>
+      <h1 style={s.headline}>{itineraryMeta?.name || 'Itinerary.'}</h1>
+      <p style={s.sub}>
+        {previewOnly
+          ? "Sign in to add or remove things on this itinerary together."
+          : "Everything you've saved, in one place. Email it to yourself, or invite someone to plan with you."}
+      </p>
+
+      {previewOnly && (
+        <div style={s.actionsRow}>
+          <Link to={`/login?redirect=/itinerary?t=${inviteToken}`} style={s.gateBtn}>Sign in to collaborate</Link>
+        </div>
+      )}
 
       {banner && (
-        <p style={{ ...s.banner, ...(banner.type === 'success' ? s.bannerSuccess : s.bannerError) }}>
+        <p style={{ ...s.banner, ...(banner.type === 'success' ? s.bannerSuccess : banner.type === 'info' ? s.bannerInfo : s.bannerError) }}>
           {banner.text}
         </p>
       )}
 
-      {!loading && hasAnything && (
-        <button
-          style={sending ? { ...s.emailBtn, ...s.emailBtnDisabled } : s.emailBtn}
-          onClick={handleEmailMe}
-          disabled={sending}
-        >
-          {sending ? 'Sending...' : 'Email me my itinerary'}
-        </button>
+      {!previewOnly && itineraryMeta && !itineraryMeta.isOwner && (
+        <p style={s.collabNote}>You're collaborating on this itinerary — changes you make here are visible to everyone on it.</p>
+      )}
+
+      {!previewOnly && !loading && (
+        <div style={s.actionsRow}>
+          {hasAnything && (
+            <button
+              style={sending ? { ...s.emailBtn, ...s.btnDisabled } : s.emailBtn}
+              onClick={handleEmailMe}
+              disabled={sending}
+            >
+              {sending ? 'Sending...' : 'Email me my itinerary'}
+            </button>
+          )}
+          {itineraryMeta?.shareToken && (
+            <button style={s.shareBtn} onClick={handleCopyInvite}>{copyLabel}</button>
+          )}
+          <button style={s.uploadBtn} onClick={() => fileInputRef.current?.click()}>
+            + Add from a flyer
+          </button>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            style={{ display: 'none' }}
+            onChange={handleFileSelect}
+          />
+        </div>
+      )}
+
+      {scanning && (
+        <p style={{ ...s.banner, ...s.bannerInfo }}>Reading your flyer...</p>
+      )}
+
+      {pendingFlyer && (
+        <div style={s.uploadPanel}>
+          <h3 style={s.uploadPanelTitle}>Confirm event details</h3>
+          <input style={s.field} placeholder="Title" value={pendingFlyer.title} onChange={e => updatePendingField('title', e.target.value)} />
+          <div style={s.fieldRow}>
+            <input style={s.field} placeholder="Venue" value={pendingFlyer.venue} onChange={e => updatePendingField('venue', e.target.value)} />
+            <input style={s.field} placeholder="City" value={pendingFlyer.city} onChange={e => updatePendingField('city', e.target.value)} />
+          </div>
+          <input style={s.field} placeholder="Address" value={pendingFlyer.address} onChange={e => updatePendingField('address', e.target.value)} />
+          <div style={s.fieldRow}>
+            <input style={s.field} placeholder="Date (YYYY-MM-DD)" value={pendingFlyer.date} onChange={e => updatePendingField('date', e.target.value)} />
+            <input style={s.field} placeholder="End date (if multi-day)" value={pendingFlyer.end_date} onChange={e => updatePendingField('end_date', e.target.value)} />
+            <input style={s.field} placeholder="Time" value={pendingFlyer.time} onChange={e => updatePendingField('time', e.target.value)} />
+          </div>
+          <input style={s.field} placeholder="Genre" value={pendingFlyer.genre} onChange={e => updatePendingField('genre', e.target.value)} />
+          <input style={s.field} placeholder="Ticket link" value={pendingFlyer.ticket_url} onChange={e => updatePendingField('ticket_url', e.target.value)} />
+          <div style={s.confirmRow}>
+            <button style={s.confirmBtn} onClick={handleConfirmFlyer}>Add to itinerary</button>
+            <button style={s.cancelBtn} onClick={() => setPendingFlyer(null)}>Cancel</button>
+          </div>
+        </div>
       )}
 
       {loading ? (
-        <p style={s.emptyState}>Loading your saved places...</p>
+        <p style={s.emptyState}>Loading...</p>
       ) : !hasAnything ? (
-        <p style={s.emptyState}>You haven't saved anything yet. Browse a city and tap "Save" on any place or DJ that catches your eye.</p>
+        <p style={s.emptyState}>
+          {previewOnly
+            ? "Nothing saved on this itinerary yet."
+            : 'You haven\'t saved anything yet. Browse a city and tap "Save," or add an event straight from a flyer.'}
+        </p>
       ) : (
         <>
+          {flyerEvents.length > 0 && (
+            <section style={s.citySection}>
+              <h2 style={s.sectionHeading}>From flyers</h2>
+              <div style={s.list}>
+                {flyerEvents.map(ev => (
+                  <div key={ev.id} style={s.card}>
+                    <div style={s.info}>
+                      <p style={s.meta}>
+                        {ev.venue}{ev.city ? ` · ${ev.city}` : ''}{ev.event_date ? ` · ${ev.event_date}` : ''}
+                      </p>
+                      <h3 style={s.name}>{ev.title}</h3>
+                      {ev.event_time && <p style={s.meta}>{ev.event_time}</p>}
+                    </div>
+                    {!previewOnly && (
+                      <button style={s.removeBtn} onClick={() => handleRemoveEvent(ev.id)}>Remove</button>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </section>
+          )}
+
           {savedPlaces.length > 0 && (
             <>
               {Object.entries(byCity).map(([city, places]) => (
@@ -168,13 +439,15 @@ export default function MyItinerary() {
                   <h2 style={s.cityTitle}>{city}</h2>
                   <div style={s.list}>
                     {places.map(place => (
-                      <div key={place.savedId} style={s.card}>
+                      <div key={place.savedId || place.id} style={s.card}>
                         <div style={s.info}>
                           <p style={s.meta}>{place.dining_style || place.category}</p>
                           <h3 style={s.name}>{place.name}</h3>
                           <p style={s.meta}>{place.address}</p>
                         </div>
-                        <button style={s.removeBtn} onClick={() => handleRemovePlace(place.savedId)}>Remove</button>
+                        {!previewOnly && (
+                          <button style={s.removeBtn} onClick={() => handleRemovePlace(place.savedId)}>Remove</button>
+                        )}
                       </div>
                     ))}
                   </div>
@@ -185,14 +458,14 @@ export default function MyItinerary() {
 
           {savedDjs.length > 0 && (
             <>
-              {savedPlaces.length > 0 && <div style={s.divider} />}
+              {(savedPlaces.length > 0 || flyerEvents.length > 0) && <div style={s.divider} />}
               <h2 style={s.sectionHeading}>DJs to check out</h2>
               <div style={s.list}>
                 {savedDjs.map(sd => {
                   const dj = sd.dj_curators
                   if (!dj) return null
                   return (
-                    <div key={sd.id} style={s.card}>
+                    <div key={sd.id || dj.id} style={s.card}>
                       <div style={s.info}>
                         <p style={s.meta}>{dj.city}{dj.event_name ? ` · ${dj.event_name}` : ''}</p>
                         <h3 style={s.name}>{dj.name}</h3>
@@ -200,7 +473,9 @@ export default function MyItinerary() {
                           <p style={s.meta}>{dj.genres.join(', ')}</p>
                         )}
                       </div>
-                      <button style={s.removeBtn} onClick={() => handleRemoveDj(sd.id)}>Remove</button>
+                      {!previewOnly && (
+                        <button style={s.removeBtn} onClick={() => handleRemoveDj(sd.id)}>Remove</button>
+                      )}
                     </div>
                   )
                 })}
