@@ -50,7 +50,7 @@ export default async function handler(req, res) {
       return
     }
 
-    // 1. Check if this phone number belongs to an approved curator
+    // 1. Check if this phone number belongs to an approved curator with events access
     const { createClient } = await import('@supabase/supabase-js')
     const supabase = createClient(
       process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL,
@@ -59,7 +59,7 @@ export default async function handler(req, res) {
 
     const { data: curator, error: curatorError } = await supabase
       .from('curators')
-      .select('id, name, can_events, phone_number')
+      .select('id, user_id, name, can_events, phone_number')
       .eq('phone_number', from)
       .single()
 
@@ -107,7 +107,8 @@ export default async function handler(req, res) {
     const arrayBuffer = await mediaResponse.arrayBuffer()
     const base64Image = Buffer.from(arrayBuffer).toString('base64')
 
-    // 4. Scan the flyer with Claude (same extraction pattern as the curator portal)
+    // 4. Scan the flyer with Claude — same extraction shape as api/scan.js,
+    // used by the curator portal's Add Event form.
     const scanResponse = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: {
@@ -168,21 +169,34 @@ If any field is not visible on the flyer, return an empty string for that field.
       return
     }
 
-    // 5. Insert as a pending happening for the curator to review/approve in the portal
+    if (!parsed.date) {
+      res.status(200).send(twiml(
+        "We read your flyer but couldn't find a clear date. Please submit it at getlored.co/curator so you can fill that in."
+      ))
+      return
+    }
+
+    // 5. Insert directly into events — same table and shape the curator
+    // portal's Add Event form writes to. curator_id here is the AUTH user id
+    // (curator.user_id), matching how the portal inserts events, not the
+    // curators table's own row id.
     const { error: insertError } = await supabase
-      .from('happenings')
+      .from('events')
       .insert({
         title: parsed.title || '',
-        description: parsed.description || '',
+        venue: parsed.venue || '',
+        address: parsed.address || '',
         city: parsed.city || '',
         country: parsed.country || '',
-        date: parsed.date || null,
+        date: parsed.date,
+        end_date: parsed.end_date || null,
         time: parsed.time || '',
-        location: parsed.venue || parsed.address || '',
-        image_url: mediaUrl,
-        link: parsed.ticket_url || '',
-        curator_id: curator.id,
-        status: 'pending',
+        genre: parsed.genre || '',
+        description: parsed.description || '',
+        ticket_url: parsed.ticket_url || '',
+        flyer_url: mediaUrl,
+        curator_id: curator.user_id,
+        status: 'published',
       })
 
     if (insertError) {
@@ -194,7 +208,7 @@ If any field is not visible on the flyer, return an empty string for that field.
 
     const eventName = parsed.title || 'your event'
     res.status(200).send(twiml(
-      `Got your flyer for ${eventName}! It's been added for review. Check getlored.co/curator to confirm details.`
+      `Got it — "${eventName}" is live on Get Lored. Check getlored.co/curator to review or edit the details.`
     ))
   } catch (error) {
     res.status(200).send(twiml(
