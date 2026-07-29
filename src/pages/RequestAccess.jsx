@@ -38,17 +38,26 @@ const s = {
   checkboxLink: { color: '#B07D62', borderBottom: '1px solid #B07D62', paddingBottom: '1px' },
 }
 
+function normalizePhone(raw) {
+  const digits = raw.replace(/\D/g, '')
+  if (digits.length === 10) return `+1${digits}`
+  if (digits.length === 11 && digits.startsWith('1')) return `+${digits}`
+  if (raw.startsWith('+')) return raw
+  return raw
+}
+
 export default function RequestAccess() {
   const [checkingSession, setCheckingSession] = useState(true)
   const [existingUser, setExistingUser] = useState(null)
 
   const [form, setForm] = useState({
-    name: '', email: '', instagram: '', city: '', why: '',
+    name: '', email: '', instagram: '', city: '', why: '', phone: '',
     password: '', confirmPassword: '',
   })
   const [wantsEvents, setWantsEvents] = useState(false)
   const [wantsPlaces, setWantsPlaces] = useState(false)
   const [agreedToPolicy, setAgreedToPolicy] = useState(false)
+  const [agreedToSms, setAgreedToSms] = useState(false)
   const [marketingOptIn, setMarketingOptIn] = useState(false)
   const [loading, setLoading] = useState(false)
   const [submitted, setSubmitted] = useState(false)
@@ -127,12 +136,22 @@ export default function RequestAccess() {
       setError('Please tell us why you\'re the right fit.')
       return
     }
+    const phoneDigits = form.phone.replace(/\D/g, '')
+    if (phoneDigits.length < 10) {
+      setError('Please enter a valid phone number.')
+      return
+    }
     if (!agreedToPolicy) {
       setError('Please acknowledge the Privacy Policy to continue.')
       return
     }
+    if (!agreedToSms) {
+      setError('Please agree to receive text messages to continue.')
+      return
+    }
 
     setLoading(true)
+    const normalizedPhone = normalizePhone(form.phone)
 
     // Already-signed-in member: just attach the request to their existing account.
     if (existingUser) {
@@ -142,6 +161,7 @@ export default function RequestAccess() {
         instagram: form.instagram,
         city: form.city,
         why: form.why,
+        phone: normalizedPhone,
         user_id: existingUser.id,
         wants_events: wantsEvents,
         wants_places: wantsPlaces,
@@ -198,6 +218,7 @@ export default function RequestAccess() {
       instagram: form.instagram,
       city: form.city,
       why: form.why,
+      phone: normalizedPhone,
       user_id: data.user?.id,
       wants_events: wantsEvents,
       wants_places: wantsPlaces,
@@ -314,6 +335,11 @@ export default function RequestAccess() {
           )}
         </div>
         <div style={s.fieldGroup}>
+          <label style={s.label}>Phone number</label>
+          <input style={s.input} name="phone" type="tel" value={form.phone} onChange={handleChange} placeholder="(704) 555-0123" required />
+          <p style={s.hint}>Used to verify you when you text in event flyers.</p>
+        </div>
+        <div style={s.fieldGroup}>
           <label style={s.label}>Instagram handle</label>
           <input style={s.input} name="instagram" value={form.instagram} onChange={handleChange} placeholder="@yourhandle" required />
         </div>
@@ -368,6 +394,25 @@ export default function RequestAccess() {
             I acknowledge Get Lored's{' '}
             <Link to="/privacy" target="_blank" style={s.checkboxLink}>Privacy Policy</Link>{' '}and{' '}
             <Link to="/terms" target="_blank" style={s.checkboxLink}>Terms of Service</Link>.
+          </span>
+        </label>
+
+        <label style={s.checkboxRow}>
+          <input
+            type="checkbox"
+            style={s.checkbox}
+            checked={agreedToSms}
+            onChange={(e) => setAgreedToSms(e.target.checked)}
+            required
+          />
+          <span style={s.checkboxLabel}>
+            By checking this box, I agree to receive recurring text messages from Get Lored
+            related to my curator flyer submissions, including confirmation replies, error
+            notifications, and status updates. Message frequency varies. Message and data rates
+            may apply. Reply STOP to cancel, HELP for help. Terms:{' '}
+            <Link to="/terms" target="_blank" style={s.checkboxLink}>getlored.co/terms</Link>.
+            Privacy:{' '}
+            <Link to="/privacy" target="_blank" style={s.checkboxLink}>getlored.co/privacy</Link>.
           </span>
         </label>
 
