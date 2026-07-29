@@ -56,7 +56,7 @@ export default function CuratorProfile() {
     async function load() {
       setLoading(true)
       const { data: curatorRow } = await supabase
-        .from('curators')
+        .from('public_curator_profiles')
         .select('id, user_id, name, city, instagram, can_events, can_places')
         .eq('id', curatorId)
         .single()
