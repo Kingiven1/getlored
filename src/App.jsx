@@ -10,6 +10,7 @@ import Login from './pages/Login.jsx'
 import CuratorLogin from './pages/CuratorLogin.jsx'
 import RequestAccess from './pages/RequestAccess.jsx'
 import CuratorPortal from './pages/CuratorPortal.jsx'
+import CuratorProfile from './pages/CuratorProfile.jsx'
 import Admin from './pages/Admin.jsx'
 import MyItinerary from './pages/MyItinerary.jsx'
 import PrivacyPolicy from './pages/PrivacyPolicy.jsx'
@@ -51,27 +52,28 @@ function PageViewTracker() {
 }
 
 export default function App() {
-return (
-<BrowserRouter>
-<style>{globalCSS}</style>
-<PageViewTracker />
-<div style={{ fontFamily: "'DM Sans', sans-serif", backgroundColor: '#FAF8F5', minHeight: '100vh', color: '#1A1A1A' }}>
-<Navbar />
-<Routes>
-<Route path="/" element={<Home />} />
-<Route path="/cities" element={<Cities />} />
-<Route path="/cities/:city" element={<CityPage />} />
-<Route path="/events/:id" element={<EventDetail />} />
-<Route path="/login" element={<Login />} />
-<Route path="/curator-login" element={<CuratorLogin />} />
-<Route path="/request-access" element={<RequestAccess />} />
-<Route path="/curator" element={<CuratorPortal />} />
-<Route path="/control-panel" element={<Admin />} />
-<Route path="/itinerary" element={<MyItinerary />} />
-<Route path="/privacy" element={<PrivacyPolicy />} />
-<Route path="/terms" element={<TermsOfService />} />
-</Routes>
-</div>
-</BrowserRouter>
+  return (
+    <BrowserRouter>
+      <style>{globalCSS}</style>
+      <PageViewTracker />
+      <div style={{ fontFamily: "'DM Sans', sans-serif", backgroundColor: '#FAF8F5', minHeight: '100vh', color: '#1A1A1A' }}>
+        <Navbar />
+        <Routes>
+          <Route path="/" element={<Home />} />
+          <Route path="/cities" element={<Cities />} />
+          <Route path="/cities/:city" element={<CityPage />} />
+          <Route path="/events/:id" element={<EventDetail />} />
+          <Route path="/login" element={<Login />} />
+          <Route path="/curator-login" element={<CuratorLogin />} />
+          <Route path="/request-access" element={<RequestAccess />} />
+          <Route path="/curator" element={<CuratorPortal />} />
+          <Route path="/curators/:curatorId" element={<CuratorProfile />} />
+          <Route path="/control-panel" element={<Admin />} />
+          <Route path="/itinerary" element={<MyItinerary />} />
+          <Route path="/privacy" element={<PrivacyPolicy />} />
+          <Route path="/terms" element={<TermsOfService />} />
+        </Routes>
+      </div>
+    </BrowserRouter>
   )
 }
