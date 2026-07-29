@@ -137,7 +137,7 @@ export default function RequestAccess() {
       return
     }
     const phoneDigits = form.phone.replace(/\D/g, '')
-    if (phoneDigits.length < 10) {
+    if (wantsEvents && phoneDigits.length < 10) {
       setError('Please enter a valid phone number.')
       return
     }
@@ -145,7 +145,7 @@ export default function RequestAccess() {
       setError('Please acknowledge the Privacy Policy to continue.')
       return
     }
-    if (!agreedToSms) {
+    if (wantsEvents && !agreedToSms) {
       setError('Please agree to receive text messages to continue.')
       return
     }
@@ -334,11 +334,13 @@ export default function RequestAccess() {
             <input style={s.input} name="email" type="email" value={form.email} onChange={handleChange} placeholder="you@example.com" required />
           )}
         </div>
-        <div style={s.fieldGroup}>
-          <label style={s.label}>Phone number</label>
-          <input style={s.input} name="phone" type="tel" value={form.phone} onChange={handleChange} placeholder="(704) 555-0123" required />
-          <p style={s.hint}>Used to verify you when you text in event flyers.</p>
-        </div>
+        {wantsEvents && (
+          <div style={s.fieldGroup}>
+            <label style={s.label}>Phone number</label>
+            <input style={s.input} name="phone" type="tel" value={form.phone} onChange={handleChange} placeholder="(704) 555-0123" required />
+            <p style={s.hint}>Used to verify you when you text in event flyers.</p>
+          </div>
+        )}
         <div style={s.fieldGroup}>
           <label style={s.label}>Instagram handle</label>
           <input style={s.input} name="instagram" value={form.instagram} onChange={handleChange} placeholder="@yourhandle" required />
@@ -397,24 +399,26 @@ export default function RequestAccess() {
           </span>
         </label>
 
-        <label style={s.checkboxRow}>
-          <input
-            type="checkbox"
-            style={s.checkbox}
-            checked={agreedToSms}
-            onChange={(e) => setAgreedToSms(e.target.checked)}
-            required
-          />
-          <span style={s.checkboxLabel}>
-            By checking this box, I agree to receive recurring text messages from Get Lored
-            related to my curator flyer submissions, including confirmation replies, error
-            notifications, and status updates. Message frequency varies. Message and data rates
-            may apply. Reply STOP to cancel, HELP for help. Terms:{' '}
-            <Link to="/terms" target="_blank" style={s.checkboxLink}>getlored.co/terms</Link>.
-            Privacy:{' '}
-            <Link to="/privacy" target="_blank" style={s.checkboxLink}>getlored.co/privacy</Link>.
-          </span>
-        </label>
+        {wantsEvents && (
+          <label style={s.checkboxRow}>
+            <input
+              type="checkbox"
+              style={s.checkbox}
+              checked={agreedToSms}
+              onChange={(e) => setAgreedToSms(e.target.checked)}
+              required
+            />
+            <span style={s.checkboxLabel}>
+              By checking this box, I agree to receive recurring text messages from Get Lored
+              related to my curator flyer submissions, including confirmation replies, error
+              notifications, and status updates. Message frequency varies. Message and data rates
+              may apply. Reply STOP to cancel, HELP for help. Terms:{' '}
+              <Link to="/terms" target="_blank" style={s.checkboxLink}>getlored.co/terms</Link>.
+              Privacy:{' '}
+              <Link to="/privacy" target="_blank" style={s.checkboxLink}>getlored.co/privacy</Link>.
+            </span>
+          </label>
+        )}
 
         {!existingUser && (
           <label style={s.checkboxRow}>
