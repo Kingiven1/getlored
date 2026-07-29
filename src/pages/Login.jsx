@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase.js'
 
@@ -34,9 +34,29 @@ const s = {
   interestRow: { display: 'flex', alignItems: 'center', gap: '8px' },
 }
 
+let placesScriptPromise = null
+
+function loadGooglePlacesScript() {
+  if (window.google?.maps?.places) return Promise.resolve()
+  if (placesScriptPromise) return placesScriptPromise
+
+  placesScriptPromise = new Promise((resolve, reject) => {
+    const script = document.createElement('script')
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${import.meta.env.VITE_GOOGLE_PLACES_API_KEY}&libraries=places`
+    script.async = true
+    script.defer = true
+    script.onload = () => resolve()
+    script.onerror = () => reject(new Error('Failed to load Google Places script'))
+    document.head.appendChild(script)
+  })
+
+  return placesScriptPromise
+}
+
 export default function Login() {
   const [mode, setMode] = useState('login')
   const [form, setForm] = useState({ email: '', password: '', confirmPassword: '', name: '', city: '', instagram: '' })
+  const [citySelected, setCitySelected] = useState(false)
   const [agreedToPolicy, setAgreedToPolicy] = useState(false)
   const [marketingOptIn, setMarketingOptIn] = useState(false)
   const [isInfluencer, setIsInfluencer] = useState(false)
@@ -46,8 +66,41 @@ export default function Login() {
   const [success, setSuccess] = useState('')
   const navigate = useNavigate()
 
+  const cityInputRef = useRef(null)
+  const autocompleteRef = useRef(null)
+
+  useEffect(() => {
+    if (mode !== 'signup') return
+
+    let cancelled = false
+
+    loadGooglePlacesScript()
+      .then(() => {
+        if (cancelled || !cityInputRef.current || autocompleteRef.current) return
+
+        autocompleteRef.current = new window.google.maps.places.Autocomplete(cityInputRef.current, {
+          types: ['(cities)'],
+        })
+
+        autocompleteRef.current.addListener('place_changed', () => {
+          const place = autocompleteRef.current.getPlace()
+          if (place?.formatted_address || place?.name) {
+            setForm(prev => ({ ...prev, city: place.formatted_address || place.name }))
+            setCitySelected(true)
+          }
+        })
+      })
+      .catch(() => {
+        // If the script fails to load, the city field still works as a
+        // plain text input — just without autocomplete suggestions.
+      })
+
+    return () => { cancelled = true }
+  }, [mode])
+
   function handleChange(e) {
     setForm({ ...form, [e.target.name]: e.target.value })
+    if (e.target.name === 'city') setCitySelected(false)
   }
 
   function toggleInterest(option) {
@@ -62,6 +115,10 @@ export default function Login() {
     setSuccess('')
 
     if (mode === 'signup') {
+      if (!citySelected) {
+        setError('Please select your city from the dropdown suggestions.')
+        return
+      }
       if (form.password.length < 8) {
         setError('Password must be at least 8 characters.')
         return
@@ -146,7 +203,17 @@ export default function Login() {
               </div>
               <div>
                 <label style={s.label}>Your city</label>
-                <input style={s.input} name="city" value={form.city} onChange={handleChange} placeholder="Charlotte, Miami, London..." required />
+                <input
+                  ref={cityInputRef}
+                  style={s.input}
+                  name="city"
+                  value={form.city}
+                  onChange={handleChange}
+                  placeholder="Start typing your city..."
+                  autoComplete="off"
+                  required
+                />
+                <p style={s.hint}>Select your city from the dropdown suggestions.</p>
               </div>
               <div>
                 <label style={s.label}>Instagram handle (optional)</label>
@@ -268,7 +335,7 @@ export default function Login() {
 
         <p style={s.toggle}>
           {mode === 'login' ? "Don't have an account? " : 'Already have an account? '}
-          <span style={s.toggleLink} onClick={() => { setMode(mode === 'login' ? 'signup' : 'login'); setError(''); setSuccess('') }}>
+          <span style={s.toggleLink} onClick={() => { setMode(mode === 'login' ? 'signup' : 'login'); setError(''); setSuccess(''); setCitySelected(false) }}>
             {mode === 'login' ? 'Sign up' : 'Sign in'}
           </span>
         </p>
