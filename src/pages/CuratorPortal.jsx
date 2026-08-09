@@ -38,7 +38,7 @@ const emptyEvent = {
 }
 
 const emptyPlace = {
-  name: '', category: 'restaurant', dining_style: '', address: '', city: '', country: '',
+  name: '', category: 'restaurant', dining_style: '', cuisine: '', address: '', city: '', country: '',
   description: '', google_maps_url: '', website: '',
 }
 
@@ -484,6 +484,7 @@ export default function CuratorPortal() {
           website: data.website || prev.website,
           description: data.description || prev.description,
           dining_style: DINING_STYLES.includes(data.dining_style) ? data.dining_style : prev.dining_style,
+          cuisine: data.cuisine || prev.cuisine,
         }))
 
         const flagged = [...(data.fields_needing_review || [])]
@@ -542,6 +543,7 @@ export default function CuratorPortal() {
       name: place.name || '',
       category: place.category || 'restaurant',
       dining_style: place.dining_style || '',
+      cuisine: place.cuisine || '',
       address: place.address || '',
       city: place.city || '',
       country: place.country || '',
@@ -1181,6 +1183,11 @@ export default function CuratorPortal() {
                   </div>
                 </div>
                 <div style={s.fieldGroup}>
+                  <label style={s.label}>Cuisine (if applicable)</label>
+                  <input style={s.input} name="cuisine" value={placeForm.cuisine} onChange={handlePlaceChange} placeholder="Jamaican, Thai, Japanese, Italian..." />
+                  <p style={s.hint}>Leave blank for places without a specific cuisine, like bars or attractions.</p>
+                </div>
+                <div style={s.fieldGroup}>
                   <label style={s.label}>Address</label>
                   <input style={placeReviewFields.includes('address') ? s.inputReview : s.input} name="address" value={placeForm.address} onChange={handlePlaceChange} placeholder="Full address" />
                   {placeReviewFields.includes('address') && <p style={s.reviewHint}>AI wasn't fully confident here — please double-check</p>}
@@ -1273,7 +1280,7 @@ export default function CuratorPortal() {
                     {visiblePlaces.map(place => (
                       <div key={place.id} style={s.myCard}>
                         <div style={s.myInfo}>
-                          <p style={s.myEyebrow}>{place.dining_style || formatCategory(place.category)}</p>
+                          <p style={s.myEyebrow}>{place.dining_style || formatCategory(place.category)}{place.cuisine ? ` · ${place.cuisine}` : ''}</p>
                           <h3 style={s.myTitle}>{place.name}</h3>
                           <p style={s.mySub}>{place.city}{place.address ? ` · ${place.address}` : ''}</p>
                         </div>

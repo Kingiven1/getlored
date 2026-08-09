@@ -9,6 +9,7 @@ const cityMeta = {
   'charlotte': { name: 'Charlotte', country: 'USA' },
   'chicago': { name: 'Chicago', country: 'USA' },
   'atlanta': { name: 'Atlanta', country: 'USA' },
+  'toronto': { name: 'Toronto', country: 'Canada' },
   'mexico-city': { name: 'Mexico City', country: 'Mexico' },
   'panama-city': { name: 'Panama City', country: 'Panama' },
   'lisbon': { name: 'Lisbon', country: 'Portugal' },
@@ -27,9 +28,14 @@ const s = {
   howToItem: { display: 'flex', alignItems: 'center', gap: '8px', fontFamily: "'DM Sans', sans-serif", fontSize: '12px', fontWeight: '300', color: '#6B6560' },
   howToNum: { fontFamily: "'Cormorant Garamond', serif", fontStyle: 'italic', fontSize: '16px', color: '#B07D62' },
   howToLink: { color: '#1A1A1A', fontWeight: '500', borderBottom: '1px solid #1A1A1A' },
-  tabs: { display: 'flex', borderBottom: '1px solid #E8E4DE', marginBottom: '48px', marginTop: '32px', flexWrap: 'wrap' },
+  tabs: { display: 'flex', borderBottom: '1px solid #E8E4DE', marginBottom: '32px', marginTop: '32px', flexWrap: 'wrap' },
   tab: { fontFamily: "'DM Sans', sans-serif", fontSize: '12px', textTransform: 'uppercase', color: '#9B9590', padding: '12px 24px', cursor: 'pointer', border: 'none', background: 'none', borderBottom: '2px solid transparent', marginBottom: '-1px', letterSpacing: '0.08em' },
   tabActive: { color: '#1A1A1A', borderBottom: '2px solid #1A1A1A' },
+  filterBar: { display: 'flex', gap: '12px', marginBottom: '24px', flexWrap: 'wrap', alignItems: 'flex-end' },
+  filterGroup: { display: 'flex', flexDirection: 'column', gap: '6px', minWidth: '180px' },
+  filterLabel: { fontFamily: "'DM Sans', sans-serif", fontSize: '10px', fontWeight: '500', letterSpacing: '0.08em', textTransform: 'uppercase', color: '#9B9590' },
+  filterSelect: { padding: '10px 14px', fontFamily: "'DM Sans', sans-serif", fontSize: '13px', fontWeight: '300', color: '#1A1A1A', backgroundColor: '#F2EEE9', border: '1px solid #E8E4DE', borderRadius: '2px', outline: 'none' },
+  filterClear: { padding: '10px 16px', fontFamily: "'DM Sans', sans-serif", fontSize: '12px', color: '#9B9590', backgroundColor: 'transparent', border: '1px solid #E8E4DE', borderRadius: '2px', cursor: 'pointer' },
   grid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '2px' },
   card: { backgroundColor: '#F2EEE9', padding: '28px 24px' },
   cardDate: { fontFamily: "'DM Sans', sans-serif", fontSize: '11px', textTransform: 'uppercase', color: '#B07D62', marginBottom: '10px', letterSpacing: '0.1em' },
@@ -39,6 +45,7 @@ const s = {
   tag: { display: 'inline-block', fontFamily: "'DM Sans', sans-serif", fontSize: '9px', fontWeight: '500', textTransform: 'uppercase', color: '#9B9590', border: '1px solid #D8D4CE', padding: '3px 8px', borderRadius: '2px', letterSpacing: '0.08em', lineHeight: '1.3' },
   instagramTag: { display: 'inline-block', fontFamily: "'DM Sans', sans-serif", fontSize: '9px', fontWeight: '500', textTransform: 'uppercase', color: '#B07D62', border: '1px solid #E8D5C4', backgroundColor: '#FDF8F5', padding: '3px 8px', borderRadius: '2px', letterSpacing: '0.08em', lineHeight: '1.3' },
   styleTag: { display: 'inline-block', fontFamily: "'DM Sans', sans-serif", fontSize: '9px', fontWeight: '500', textTransform: 'uppercase', color: '#B07D62', border: '1px solid #E8D5C4', backgroundColor: '#FDF8F5', padding: '3px 8px', borderRadius: '2px', letterSpacing: '0.08em', lineHeight: '1.3' },
+  cuisineTag: { display: 'inline-block', fontFamily: "'DM Sans', sans-serif", fontSize: '9px', fontWeight: '500', textTransform: 'uppercase', color: '#6B3FA0', border: '1px solid #D9C8F0', backgroundColor: '#F5EFFB', padding: '3px 8px', borderRadius: '2px', letterSpacing: '0.08em', lineHeight: '1.3' },
   saveTag: { display: 'inline-block', fontFamily: "'DM Sans', sans-serif", fontSize: '9px', fontWeight: '500', textTransform: 'uppercase', color: '#1A1A1A', border: '1px solid #1A1A1A', backgroundColor: 'transparent', padding: '3px 8px', borderRadius: '2px', letterSpacing: '0.08em', lineHeight: '1.3', cursor: 'pointer', font: 'inherit' },
   savedTag: { display: 'inline-block', fontFamily: "'DM Sans', sans-serif", fontSize: '9px', fontWeight: '500', textTransform: 'uppercase', color: '#FAF8F5', border: '1px solid #1A1A1A', backgroundColor: '#1A1A1A', padding: '3px 8px', borderRadius: '2px', letterSpacing: '0.08em', lineHeight: '1.3', cursor: 'pointer', font: 'inherit' },
   empty: { fontFamily: "'Cormorant Garamond', serif", fontSize: '24px', fontStyle: 'italic', color: '#9B9590', textAlign: 'center', padding: '80px 0' },
@@ -116,7 +123,7 @@ function PlaceCard({ place, locked, onLockedClick, saved, onToggleSave }) {
 
   return (
     <div style={s.card}>
-      <p style={s.cardDate}>{topLabel}</p>
+      <p style={s.cardDate}>{topLabel}{place.cuisine ? ` · ${place.cuisine}` : ''}</p>
       <h2 style={s.cardTitle}>{place.name}</h2>
       <p style={s.cardSub}>{place.address}</p>
       <div style={s.tagRow}>
@@ -127,6 +134,7 @@ function PlaceCard({ place, locked, onLockedClick, saved, onToggleSave }) {
         >
           {saved ? 'Saved ✓' : 'Save'}
         </button>
+        {place.cuisine && <span style={s.cuisineTag}>{place.cuisine}</span>}
         {place.dining_style && <span style={s.styleTag}>{place.dining_style}</span>}
         {place.website && (
           locked ? (
@@ -189,6 +197,7 @@ export default function CityPage() {
   const [savedPlaceIds, setSavedPlaceIds] = useState(new Set())
   const [savedDjIds, setSavedDjIds] = useState(new Set())
   const [gateOpen, setGateOpen] = useState(false)
+  const [cuisineFilter, setCuisineFilter] = useState('')
 
   useEffect(() => {
     let active = true
@@ -241,6 +250,10 @@ export default function CityPage() {
       subscription.unsubscribe()
     }
   }, [city, meta.name])
+
+  useEffect(() => {
+    setCuisineFilter('')
+  }, [activeTab])
 
   function openGate() {
     setGateOpen(true)
@@ -300,11 +313,19 @@ export default function CityPage() {
     }
   }
 
-  const placeFilter = places.filter(p => {
+  const placeFilterByTab = places.filter(p => {
     if (activeTab === 'restaurants') return p.category === 'restaurant' || p.category === 'coffee'
     if (activeTab === 'bars') return BAR_CATEGORIES.includes(p.category)
     return !['restaurant', 'coffee', ...BAR_CATEGORIES].includes(p.category)
   })
+
+  const availableCuisines = [...new Set(placeFilterByTab.map(p => p.cuisine).filter(Boolean))].sort()
+
+  const placeFilter = cuisineFilter
+    ? placeFilterByTab.filter(p => p.cuisine === cuisineFilter)
+    : placeFilterByTab
+
+  const showCuisineFilter = activeTab === 'restaurants' && availableCuisines.length > 0
 
   return (
     <main style={s.page}>
@@ -335,6 +356,23 @@ export default function CityPage() {
           </button>
         ))}
       </div>
+
+      {showCuisineFilter && (
+        <div style={s.filterBar}>
+          <div style={s.filterGroup}>
+            <label style={s.filterLabel}>Cuisine</label>
+            <select style={s.filterSelect} value={cuisineFilter} onChange={(e) => setCuisineFilter(e.target.value)}>
+              <option value="">All cuisines</option>
+              {availableCuisines.map(c => (
+                <option key={c} value={c}>{c}</option>
+              ))}
+            </select>
+          </div>
+          {cuisineFilter && (
+            <button style={s.filterClear} onClick={() => setCuisineFilter('')}>Clear filter</button>
+          )}
+        </div>
+      )}
 
       {loading && <p style={s.loading}>Loading the lore...</p>}
 
