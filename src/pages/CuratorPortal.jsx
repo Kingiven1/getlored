@@ -7,6 +7,7 @@ const SUPPORTED_CITIES = [
   { city: 'Charlotte', country: 'USA' },
   { city: 'Chicago', country: 'USA' },
   { city: 'Atlanta', country: 'USA' },
+  { city: 'Toronto', country: 'Canada' },
   { city: 'Mexico City', country: 'Mexico' },
   { city: 'Panama City', country: 'Panama' },
   { city: 'Lisbon', country: 'Portugal' },
@@ -178,8 +179,8 @@ export default function CuratorPortal() {
   const [curator, setCurator] = useState(undefined)
   const [portalTab, setPortalTab] = useState('events')
   const [eventsSubTab, setEventsSubTab] = useState('add')
-  const [placesType, setPlacesType] = useState('place') // 'place' | 'happening'
-  const [placesViewMode, setPlacesViewMode] = useState('add') // 'add' | 'mine'
+  const [placesType, setPlacesType] = useState('place')
+  const [placesViewMode, setPlacesViewMode] = useState('add')
 
   const [eventForm, setEventForm] = useState(emptyEvent)
   const [placeForm, setPlaceForm] = useState(emptyPlace)
