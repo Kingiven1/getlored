@@ -9,6 +9,7 @@ const cities = [
   { name: 'Charlotte', country: 'USA', slug: 'charlotte' },
   { name: 'Chicago', country: 'USA', slug: 'chicago' },
   { name: 'Atlanta', country: 'USA', slug: 'atlanta' },
+  { name: 'Toronto', country: 'Canada', slug: 'toronto' },
   { name: 'Mexico City', country: 'Mexico', slug: 'mexico-city' },
   { name: 'Panama City', country: 'Panama', slug: 'panama-city' },
   { name: 'Lisbon', country: 'Portugal', slug: 'lisbon' },
