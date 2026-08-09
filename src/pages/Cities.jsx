@@ -5,6 +5,7 @@ const cities = [
   { name: 'Charlotte', country: 'USA', slug: 'charlotte', region: 'Americas' },
   { name: 'Chicago', country: 'USA', slug: 'chicago', region: 'Americas' },
   { name: 'Atlanta', country: 'USA', slug: 'atlanta', region: 'Americas' },
+  { name: 'Toronto', country: 'Canada', slug: 'toronto', region: 'Americas' },
   { name: 'Mexico City', country: 'Mexico', slug: 'mexico-city', region: 'Americas' },
   { name: 'Panama City', country: 'Panama', slug: 'panama-city', region: 'Americas' },
   { name: 'Lisbon', country: 'Portugal', slug: 'lisbon', region: 'Europe' },
