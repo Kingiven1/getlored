@@ -50,17 +50,57 @@ function buildDjRow(dj) {
   `
 }
 
+function buildEventRow(ev) {
+  const links = []
+  if (ev.instagram_handle) {
+    const url = ev.instagram_handle.startsWith('http')
+      ? ev.instagram_handle
+      : `https://instagram.com/${ev.instagram_handle.replace('@', '')}`
+    links.push(`<a href="${escapeHtml(url)}" style="color: #B07D62; text-decoration: none; font-size: 12px; margin-right: 16px;">Instagram →</a>`)
+  }
+  if (ev.website) {
+    links.push(`<a href="${escapeHtml(ev.website)}" style="color: #B07D62; text-decoration: none; font-size: 12px; margin-right: 16px;">Website →</a>`)
+  }
+  if (ev.google_maps_url) {
+    links.push(`<a href="${escapeHtml(ev.google_maps_url)}" style="color: #B07D62; text-decoration: none; font-size: 12px; margin-right: 16px;">Maps →</a>`)
+  }
+  if (ev.ticket_url) {
+    links.push(`<a href="${escapeHtml(ev.ticket_url)}" style="color: #B07D62; text-decoration: none; font-size: 12px;">Tickets / RSVP →</a>`)
+  }
+
+  const metaParts = []
+  if (ev.item_type === 'place') {
+    if (ev.address) metaParts.push(escapeHtml(ev.address))
+    else if (ev.city) metaParts.push(escapeHtml(ev.city))
+  } else {
+    if (ev.venue) metaParts.push(escapeHtml(ev.venue))
+    if (ev.city) metaParts.push(escapeHtml(ev.city))
+    if (ev.event_date) metaParts.push(escapeHtml(ev.event_date))
+  }
+
+  return `
+    <tr>
+      <td style="padding: 14px 0; border-bottom: 1px solid #E8E4DE;">
+        <div style="font-family: Georgia, serif; font-size: 18px; color: #1A1A1A; margin-bottom: 4px;">${escapeHtml(ev.title)}</div>
+        <div style="font-family: Arial, sans-serif; font-size: 13px; color: #6B6560; margin-bottom: 6px;">${metaParts.join(' &middot; ')}</div>
+        ${links.length ? `<div>${links.join('')}</div>` : ''}
+      </td>
+    </tr>
+  `
+}
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' })
   }
 
   try {
-    const { email, name, places, djs } = req.body
+    const { email, name, places, djs, events } = req.body
     const placeList = Array.isArray(places) ? places : []
     const djList = Array.isArray(djs) ? djs : []
+    const eventList = Array.isArray(events) ? events : []
 
-    if (!email || (placeList.length === 0 && djList.length === 0)) {
+    if (!email || (placeList.length === 0 && djList.length === 0 && eventList.length === 0)) {
       return res.status(400).json({ error: 'Missing email or saved items' })
     }
 
@@ -81,6 +121,13 @@ export default async function handler(req, res) {
       `
     }).join('')
 
+    const eventBlock = eventList.length ? `
+      <div style="margin-bottom: 32px;">
+        <h2 style="font-family: Georgia, serif; font-size: 22px; color: #1A1A1A; border-bottom: 2px solid #1A1A1A; padding-bottom: 8px; margin-bottom: 4px;">Added by you</h2>
+        <table style="width: 100%; border-collapse: collapse;">${eventList.map(buildEventRow).join('')}</table>
+      </div>
+    ` : ''
+
     const djBlock = djList.length ? `
       <div style="margin-bottom: 32px;">
         <h2 style="font-family: Georgia, serif; font-size: 22px; color: #1A1A1A; border-bottom: 2px solid #1A1A1A; padding-bottom: 8px; margin-bottom: 4px;">DJs to check out</h2>
@@ -92,6 +139,7 @@ export default async function handler(req, res) {
       <div style="max-width: 560px; margin: 0 auto; font-family: Arial, sans-serif; padding: 32px 24px; background-color: #FAF8F5;">
         <p style="font-family: Arial, sans-serif; font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: #B07D62; margin-bottom: 8px;">Your Itinerary</p>
         <h1 style="font-family: Georgia, serif; font-size: 32px; color: #1A1A1A; margin: 0 0 24px 0;">${name ? `${escapeHtml(name)}'s` : 'Your'} Get Lored picks</h1>
+        ${eventBlock}
         ${placeBlocks}
         ${djBlock}
         <p style="font-family: Arial, sans-serif; font-size: 12px; color: #9B9590; margin-top: 32px;">Sent from Get Lored. Manage your saved places anytime at getlored.co/itinerary</p>
